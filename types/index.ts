@@ -72,6 +72,7 @@ export type EventType = 'Casamento' | 'Formatura' | 'Debutante' | 'Corporativo' 
 export interface Contract {
     id: string; // e.g. #CN-2023-849
     clientId: string;
+    clientName?: string;
     items: string[]; // List of Item IDs
     startDate: string; // ISO Date or formatted string
     startTime?: string; // HH:mm

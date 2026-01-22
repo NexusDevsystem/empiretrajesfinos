@@ -31,7 +31,7 @@ export default function Contracts() {
         return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
     });
 
-    const getClientName = (id: string) => clients.find(c => c.id === id)?.name || 'Cliente Removido';
+    const getClientName = (contract: Contract) => contract.clientName || clients.find(c => c.id === contract.clientId)?.name || 'Cliente Removido';
 
 
     const getInitials = (name: string) => {
@@ -139,14 +139,14 @@ export default function Contracts() {
                                         <div className="relative shrink-0">
                                             <div className={`size-12 md:size-14 rounded-2xl ${statusColors.soft} flex items-center justify-center shadow-inner`}>
                                                 <span className={`text-lg md:text-xl font-black ${statusColors.text}`}>
-                                                    {getInitials(getClientName(contract.clientId))}
+                                                    {getInitials(getClientName(contract))}
                                                 </span>
                                             </div>
                                             <div className={`absolute -bottom-1 -right-1 size-4 rounded-full border-2 border-white ${statusColors.bg} ${statusColors.shadow} shadow-lg`}></div>
                                         </div>
                                         <div className="min-w-0">
                                             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Dono do Contrato</p>
-                                            <h3 className="text-base md:text-lg font-black text-navy leading-tight truncate">{getClientName(contract.clientId)}</h3>
+                                            <h3 className="text-base md:text-lg font-black text-navy leading-tight truncate">{getClientName(contract)}</h3>
                                             <div className="flex items-center gap-2 mt-1">
                                                 <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-gray-50 text-gray-400 border border-gray-100">
                                                     #{contract.id.split('-')[2]}
@@ -248,7 +248,7 @@ export default function Contracts() {
                     viewMode === 'details' ? (
                         <ContractDetails
                             contract={selectedContract}
-                            client={clients.find(c => c.id === selectedContract.clientId)!}
+                            client={clients.find(c => c.id === selectedContract.clientId) || { id: selectedContract.clientId, name: selectedContract.clientName || 'Cliente Removido', phone: 'N/A', email: 'N/A' } as any}
                             items={items.filter(i => selectedContract.items.includes(i.id))}
                             onClose={() => setSelectedContract(null)}
                             onPrint={() => setViewMode('print')}
@@ -256,7 +256,7 @@ export default function Contracts() {
                     ) : (
                         <PrintableContract
                             contract={selectedContract}
-                            client={clients.find(c => c.id === selectedContract.clientId)!}
+                            client={clients.find(c => c.id === selectedContract.clientId) || { id: selectedContract.clientId, name: selectedContract.clientName || 'Cliente Removido', phone: 'N/A', email: 'N/A' } as any}
                             items={items.filter(i => selectedContract.items.includes(i.id))}
                             onClose={() => setViewMode('details')} // Back to details instead of closing all
                         />

@@ -81,7 +81,12 @@ export default function ContractDetails({ contract, client, items, onClose, onPr
                             Dados do Cliente
                         </h3>
                         <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center sm:items-start gap-4">
-                            <div className="size-16 rounded-xl bg-gray-100 bg-cover bg-center shrink-0" style={{ backgroundImage: `url('${client.img}')` }}></div>
+                            <div
+                                className="size-16 rounded-xl bg-gray-100 bg-cover bg-center shrink-0 flex items-center justify-center text-gray-400 font-black text-xl select-none"
+                                style={client.img ? { backgroundImage: `url('${client.img}')` } : {}}
+                            >
+                                {!client.img && (client.name[0] || '?')}
+                            </div>
                             <div className="text-center sm:text-left">
                                 <h4 className="text-lg font-bold text-navy">{client.name}</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1 mt-2">

@@ -310,6 +310,7 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
         const contract: Contract = {
             id: `CN-${timestamp}-${random}`,
             clientId,
+            clientName: selectedClient?.name || newClientDetails.name,
             items: selectedItemIds,
             startDate,
             startTime,
