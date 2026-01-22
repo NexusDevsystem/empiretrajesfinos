@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Item } from '../types';
 import { getContractColor } from '../utils/colorUtils';
 import { useApp } from '../contexts/AppContext';
+import { useToast } from '../contexts/ToastContext';
 
 interface StockDetailsModalProps {
     isOpen: boolean;
@@ -11,6 +12,7 @@ interface StockDetailsModalProps {
 
 export default function StockDetailsModal({ isOpen, onClose, items }: StockDetailsModalProps) {
     const { deleteItem, addItem, updateItem, contracts, updateContractStatus, navigateTo } = useApp();
+    const { showToast } = useToast();
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<Partial<Item>>({});
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -105,10 +107,17 @@ export default function StockDetailsModal({ isOpen, onClose, items }: StockDetai
         addItem(newItem);
     };
 
-    const handleDelete = (id: string) => {
-        deleteItem(id);
-        setDeleteConfirmId(null);
-        if (items.length === 1) onClose();
+    const handleDelete = async (id: string) => {
+        try {
+            await deleteItem(id);
+            setDeleteConfirmId(null);
+            showToast('success', 'Item removido do acervo com sucesso.');
+            if (items.length === 1) onClose();
+        } catch (error) {
+            console.error('Erro ao deletar item:', error);
+            showToast('error', 'Erro ao remover item. Verifique suas permissões.');
+            setDeleteConfirmId(null);
+        }
     };
 
     const startEdit = (item: Item) => {
@@ -390,7 +399,20 @@ export default function StockDetailsModal({ isOpen, onClose, items }: StockDetai
                                                     <span className="text-xs font-bold text-navy">Unidade {unitIdx + 1}</span>
                                                     {/* Actions (Hover only) */}
                                                     <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                                                        <button onClick={() => startEdit(unit.item)} className="p-1 hover:bg-gray-200 rounded text-gray-500"><span className="material-symbols-outlined text-[14px]">edit</span></button>
+                                                        <button
+                                                            onClick={() => startEdit(unit.item)}
+                                                            className="p-1.5 hover:bg-navy/5 text-navy/50 hover:text-navy rounded-lg transition-colors"
+                                                            title="Editar item"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[18px]">edit_note</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setDeleteConfirmId(unit.item.id)}
+                                                            className="p-1.5 hover:bg-red-50 text-red-400 hover:text-red-600 rounded-lg transition-colors"
+                                                            title="Excluir item permanentemente"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[18px]">delete</span>
+                                                        </button>
                                                     </div>
                                                 </div>
 
@@ -656,6 +678,35 @@ export default function StockDetailsModal({ isOpen, onClose, items }: StockDetai
                     <div className="flex items-center gap-1.5"><div className="size-3 rounded-md bg-cyan-500 shadow-sm"></div> <span className="uppercase font-bold tracking-wider">Lavanderia</span></div>
                     <div className="flex items-center gap-1.5"><div className="size-3 rounded-md bg-orange-500 shadow-sm"></div> <span className="uppercase font-bold tracking-wider">Devolução</span></div>
                 </div>
+
+                {/* Confirmation Modals */}
+                {deleteConfirmId && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-navy/90 backdrop-blur-sm p-4">
+                        <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-300">
+                            <div className="size-16 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-6">
+                                <span className="material-symbols-outlined text-4xl">delete_forever</span>
+                            </div>
+                            <h3 className="text-xl font-black text-navy mb-2">Excluir Unidade?</h3>
+                            <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+                                Esta ação não pode ser desfeita. A unidade será removida permanentemente do acervo e do histórico.
+                            </p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => setDeleteConfirmId(null)}
+                                    className="h-12 rounded-xl border border-gray-200 text-navy font-bold hover:bg-gray-50 transition-all uppercase text-xs tracking-widest"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(deleteConfirmId)}
+                                    className="h-12 rounded-xl bg-red-600 text-white font-black hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 uppercase text-xs tracking-widest"
+                                >
+                                    Sim, Excluir
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
