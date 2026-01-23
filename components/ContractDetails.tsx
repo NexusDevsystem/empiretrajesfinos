@@ -57,8 +57,9 @@ export default function ContractDetails({ contract, client, items, onClose, onPr
             const newValue = !contract.isPhysicallySigned;
             await updateContract(contract.id, {
                 isPhysicallySigned: newValue,
-                // If marking as physically signed, clear digital signature to avoid confusion
-                lesseeSignature: newValue ? undefined : contract.lesseeSignature
+                // If marking as physically signed, clear digital signatures to avoid confusion
+                lesseeSignature: newValue ? undefined : contract.lesseeSignature,
+                attendantSignature: newValue ? undefined : contract.attendantSignature
             });
             showToast('success', newValue ? 'Contrato marcado como Assinado no Papel.' : 'Assinatura física removida.');
         } catch (error) {
@@ -386,16 +387,26 @@ export default function ContractDetails({ contract, client, items, onClose, onPr
                             </div>
                             <div
                                 onClick={() => handleOpenSig('attendant')}
-                                className={`p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md ${contract.attendantSignature ? 'bg-emerald-50 border-emerald-100' : 'bg-gray-50 border-gray-100 hover:border-primary/30'}`}
+                                className={`p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md ${contract.attendantSignature || contract.isPhysicallySigned ? 'bg-emerald-50 border-emerald-100' : 'bg-gray-50 border-gray-100 hover:border-primary/30'}`}
                             >
-                                <div className="flex items-center gap-2 mb-2">
-                                    <span className={`material-symbols-outlined text-sm ${contract.attendantSignature ? 'text-emerald-600' : 'text-gray-400'}`}>
-                                        {contract.attendantSignature ? 'check_circle' : 'pending'}
-                                    </span>
-                                    <span className="text-xs font-bold uppercase text-gray-600">Representante Empire</span>
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className={`material-symbols-outlined text-sm ${contract.attendantSignature || contract.isPhysicallySigned ? 'text-emerald-600' : 'text-gray-400'}`}>
+                                            {contract.attendantSignature || contract.isPhysicallySigned ? 'check_circle' : 'pending'}
+                                        </span>
+                                        <span className="text-xs font-bold uppercase text-gray-600">Representante Empire</span>
+                                    </div>
+                                    {contract.isPhysicallySigned && (
+                                        <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded uppercase tracking-tighter">Papel</span>
+                                    )}
                                 </div>
                                 {contract.attendantSignature ? (
                                     <img src={contract.attendantSignature} alt="Assinatura Atendente" className="h-12 object-contain" />
+                                ) : contract.isPhysicallySigned ? (
+                                    <div className="h-12 flex items-center gap-2 text-emerald-700">
+                                        <span className="material-symbols-outlined">description</span>
+                                        <p className="text-xs font-bold">Assinado no Papel</p>
+                                    </div>
                                 ) : (
                                     <p className="text-xs text-gray-400 italic">Clique para assinar</p>
                                 )}
