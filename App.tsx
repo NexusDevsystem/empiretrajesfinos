@@ -228,10 +228,17 @@ export default function App() {
             </button>
           </div>
         </div>
+
+        {/* Version */}
+        <div className="px-6 py-2 border-t border-gray-50 bg-gray-50/30 flex justify-center shrink-0">
+          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest opacity-50">
+            v1.0.0
+          </span>
+        </div>
       </aside>
 
       {/* Main Content */}
-      < main className="flex-1 flex flex-col h-[100dvh] overflow-hidden relative bg-bg-light" >
+      <main className="flex-1 flex flex-col h-[100dvh] overflow-hidden relative bg-bg-light">
         {/* Mobile Header */}
         < div className="md:hidden h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 shrink-0 shadow-sm z-20 relative" >
           {
@@ -244,24 +251,24 @@ export default function App() {
               </div>
             )
           }
-          <div className="flex items-center gap-2">
+          < div className="flex items-center gap-2" >
             <NotificationBell />
             <button onClick={() => setIsMobileMenuOpen(true)} className="text-navy p-2 hover:bg-gray-50 rounded-lg transition-colors">
               <span className="material-symbols-outlined text-2xl">menu</span>
             </button>
-          </div>
-        </div>
+          </div >
+        </div >
 
         {/* View Content */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth relative">
+        < div className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth relative" >
           {/* Desktop Header / Toolbar - visible on md+ */}
-          <div className="hidden md:flex justify-end items-center mb-6 gap-4">
+          < div className="hidden md:flex justify-end items-center mb-6 gap-4" >
             {/* We can put other tools here later, like search */}
-            <NotificationBell />
-          </div>
+            < NotificationBell />
+          </div >
 
           {renderView()}
-        </div>
+        </div >
       </main >
 
       {/* Global Wizard Modal */}
