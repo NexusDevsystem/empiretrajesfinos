@@ -17,6 +17,8 @@ export default function StockDetailsModal({ isOpen, onClose, representativeItem 
     const [editForm, setEditForm] = useState<Partial<Item>>({});
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
     const [checkInId, setCheckInId] = useState<string | null>(null);
+    const [isEditingProduct, setIsEditingProduct] = useState(false);
+    const [bulkEditForm, setBulkEditForm] = useState<Partial<Item>>({});
 
     const isSeller = profile?.role === 'vendedor';
 
@@ -196,6 +198,72 @@ export default function StockDetailsModal({ isOpen, onClose, representativeItem 
         if (editingId && editForm) {
             updateItem(editingId, editForm);
             setEditingId(null);
+        }
+    };
+
+    const startProductEdit = () => {
+        if (representativeItem) {
+            setBulkEditForm({
+                name: representativeItem.name,
+                type: representativeItem.type,
+                size: representativeItem.size,
+                color: representativeItem.color,
+                price: representativeItem.price,
+                img: representativeItem.img,
+                loc: representativeItem.loc
+            });
+            setIsEditingProduct(true);
+        }
+    };
+
+    const handleSaveProductEdit = async () => {
+        try {
+            // Update all items in the current group
+            const updatePromises = currentItems.map(item =>
+                updateItem(item.id, bulkEditForm)
+            );
+            await Promise.all(updatePromises);
+            setIsEditingProduct(false);
+            showToast('success', 'Todas as unidades do produto foram atualizadas.');
+        } catch (error) {
+            showToast('error', 'Erro ao atualizar unidades em massa.');
+        }
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const MAX_SIZE = 800;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_SIZE) {
+                            height *= MAX_SIZE / width;
+                            width = MAX_SIZE;
+                        }
+                    } else {
+                        if (height > MAX_SIZE) {
+                            width *= MAX_SIZE / height;
+                            height = MAX_SIZE;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx?.drawImage(img, 0, 0, width, height);
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    setBulkEditForm(prev => ({ ...prev, img: compressedDataUrl }));
+                };
+                img.src = event.target?.result as string;
+            };
+            reader.readAsDataURL(file);
         }
     };
 
@@ -409,6 +477,13 @@ export default function StockDetailsModal({ isOpen, onClose, representativeItem 
 
                         {!isSeller && (
                             <div className="flex items-center gap-2">
+                                <button
+                                    onClick={startProductEdit}
+                                    className="size-10 flex items-center justify-center rounded-xl bg-gold/10 text-gold border border-gold/20 hover:bg-gold hover:text-navy transition-all"
+                                    title="Editar Informações do Produto"
+                                >
+                                    <span className="material-symbols-outlined text-[20px]">edit_note</span>
+                                </button>
                                 <button
                                     onClick={() => {
                                         setIsSelectionMode(!isSelectionMode);
@@ -673,6 +748,122 @@ export default function StockDetailsModal({ isOpen, onClose, representativeItem 
                                         })}
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* BULK EDIT PRODUCT VIEW */}
+                    {isEditingProduct && (
+                        <div className="absolute inset-0 z-50 bg-white flex flex-col animate-in slide-in-from-bottom duration-300">
+                            <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                                <div>
+                                    <h3 className="text-xl font-black text-navy uppercase tracking-tight">Editar Produto</h3>
+                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Alterações afetarão todas as unidades deste item</p>
+                                </div>
+                                <button
+                                    onClick={() => setIsEditingProduct(false)}
+                                    className="size-10 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-400 transition-all"
+                                >
+                                    <span className="material-symbols-outlined">close</span>
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-auto p-8">
+                                <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-8">
+                                    {/* Left Content: Image */}
+                                    <div className="w-full md:w-1/3 space-y-4">
+                                        <div className="aspect-[3/4] rounded-2xl bg-gray-100 border-2 border-dashed border-gray-200 flex flex-col items-center justify-center relative overflow-hidden group hover:border-primary transition-all cursor-pointer">
+                                            {bulkEditForm.img ? (
+                                                <>
+                                                    <img src={bulkEditForm.img} className="w-full h-full object-cover" alt="Preview" />
+                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                                                        <span className="text-white text-xs font-bold uppercase tracking-widest">Alterar Foto</span>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <span className="material-symbols-outlined text-4xl text-gray-300">add_a_photo</span>
+                                            )}
+                                            <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileChange} />
+                                        </div>
+                                    </div>
+
+                                    {/* Right Content: Fields */}
+                                    <div className="flex-1 space-y-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="md:col-span-2 space-y-1.5">
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nome do Produto</label>
+                                                <input
+                                                    value={bulkEditForm.name || ''}
+                                                    onChange={e => setBulkEditForm(prev => ({ ...prev, name: e.target.value }))}
+                                                    className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:ring-4 focus:ring-primary/5 outline-none font-bold text-navy"
+                                                />
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Categoria</label>
+                                                <input
+                                                    value={bulkEditForm.type || ''}
+                                                    onChange={e => setBulkEditForm(prev => ({ ...prev, type: e.target.value }))}
+                                                    className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:ring-4 focus:ring-primary/5 outline-none font-bold text-navy"
+                                                />
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Tamanho</label>
+                                                <input
+                                                    value={bulkEditForm.size || ''}
+                                                    onChange={e => setBulkEditForm(prev => ({ ...prev, size: e.target.value }))}
+                                                    className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:ring-4 focus:ring-primary/5 outline-none font-bold text-navy text-center"
+                                                />
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Cor</label>
+                                                <input
+                                                    value={bulkEditForm.color || ''}
+                                                    onChange={e => setBulkEditForm(prev => ({ ...prev, color: e.target.value }))}
+                                                    className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:ring-4 focus:ring-primary/5 outline-none font-bold text-navy"
+                                                />
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Valor de Locação (R$)</label>
+                                                <input
+                                                    type="number"
+                                                    value={bulkEditForm.price || 0}
+                                                    onChange={e => setBulkEditForm(prev => ({ ...prev, price: parseFloat(e.target.value) }))}
+                                                    className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:ring-4 focus:ring-primary/5 outline-none font-black text-navy"
+                                                />
+                                            </div>
+
+                                            <div className="md:col-span-2 space-y-1.5">
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Localização de Estoque</label>
+                                                <input
+                                                    value={bulkEditForm.loc || ''}
+                                                    onChange={e => setBulkEditForm(prev => ({ ...prev, loc: e.target.value }))}
+                                                    className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:ring-4 focus:ring-primary/5 outline-none font-bold text-navy"
+                                                    placeholder="Ex: Prateleira A-12"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="px-8 py-5 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                                <button
+                                    onClick={() => setIsEditingProduct(false)}
+                                    className="px-6 py-3 rounded-xl font-bold text-gray-400 hover:bg-gray-200 transition-all uppercase text-xs tracking-widest"
+                                >
+                                    Descartar
+                                </button>
+                                <button
+                                    onClick={handleSaveProductEdit}
+                                    className="px-10 py-3 bg-primary text-white rounded-xl font-black shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all uppercase text-xs tracking-widest flex items-center gap-2"
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">save</span>
+                                    Atualizar Todas as Unidades
+                                </button>
                             </div>
                         </div>
                     )}
