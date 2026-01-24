@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useApp } from '../contexts/AppContext';
 import { Item } from '../types';
 
 interface NewItemModalProps {
@@ -26,8 +27,7 @@ export default function NewItemModal({ isOpen, onClose, onSave }: NewItemModalPr
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
-    const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
-    const typeDropdownRef = useRef<HTMLDivElement>(null);
+    const { items } = useApp();
 
     // Stop camera when closing or switching steps
     useEffect(() => {
@@ -85,39 +85,9 @@ export default function NewItemModal({ isOpen, onClose, onSave }: NewItemModalPr
         setStep('details');
     };
 
-    // Close dropdown on click outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (typeDropdownRef.current && !typeDropdownRef.current.contains(event.target as Node)) {
-                setIsTypeDropdownOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
 
-    const categories = [
-        {
-            group: 'FEMININO',
-            options: [
-                { value: 'Vestido de Noiva', label: 'Vestido Noiva' },
-                { value: 'Vestido de Festa Longo', label: 'Festa Longo' },
-                { value: 'Vestido Debutante', label: 'Debutante' },
-            ]
-        },
-        {
-            group: 'MASCULINO',
-            options: [
-                { value: 'Smoking', label: 'Smoking' },
-                { value: 'Terno', label: 'Terno' },
-                { value: 'Fraque', label: 'Fraque' },
-            ]
-        }
-    ];
-
-    const currentTypeLabel = categories
-        .flatMap(c => c.options)
-        .find(o => o.value === newItem.type)?.label || newItem.type || 'Selecione';
+    // Extract unique categories from existing items
+    const existingCategories = Array.from(new Set(items.map(i => i.type).filter(Boolean))).sort();
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -244,42 +214,20 @@ export default function NewItemModal({ isOpen, onClose, onSave }: NewItemModalPr
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div className="space-y-1.5">
                                                 <label className="text-xs font-bold text-navy uppercase ml-1 mb-1.5 block">Categoria</label>
-                                                <div className="relative" ref={typeDropdownRef}>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setIsTypeDropdownOpen(!isTypeDropdownOpen)}
-                                                        className="w-full h-11 px-4 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none flex items-center justify-between font-medium text-navy"
-                                                    >
-                                                        <span className="truncate">{currentTypeLabel}</span>
-                                                        <span className={`material-symbols-outlined text-gray-400 transition-transform duration-200 ${isTypeDropdownOpen ? 'rotate-180' : ''}`}>
-                                                            expand_more
-                                                        </span>
-                                                    </button>
-
-                                                    {isTypeDropdownOpen && (
-                                                        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-1 duration-200">
-                                                            {categories.map((group) => (
-                                                                <div key={group.group}>
-                                                                    <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                                                        {group.group}
-                                                                    </div>
-                                                                    {group.options.map((opt) => (
-                                                                        <button
-                                                                            key={opt.value}
-                                                                            onClick={() => {
-                                                                                setNewItem({ ...newItem, type: opt.value });
-                                                                                setIsTypeDropdownOpen(false);
-                                                                            }}
-                                                                            className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50 ${newItem.type === opt.value ? 'bg-primary/5 text-primary font-bold' : 'text-navy'
-                                                                                }`}
-                                                                        >
-                                                                            {opt.label}
-                                                                        </button>
-                                                                    ))}
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
+                                                <div className="relative">
+                                                    <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-[20px]">inventory_2</span>
+                                                    <input
+                                                        list="categories-list"
+                                                        value={newItem.type || ''}
+                                                        onChange={e => setNewItem({ ...newItem, type: e.target.value })}
+                                                        className="w-full h-11 pl-10 pr-4 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none font-bold text-navy placeholder-gray-400"
+                                                        placeholder="Ex: Vestido, Terno..."
+                                                    />
+                                                    <datalist id="categories-list">
+                                                        {existingCategories.map(cat => (
+                                                            <option key={cat} value={cat} />
+                                                        ))}
+                                                    </datalist>
                                                 </div>
                                             </div>
 
