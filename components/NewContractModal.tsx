@@ -156,8 +156,8 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
             availableQty: number
         }> = {};
 
-        const rStart = new Date(startDate);
-        const rEnd = new Date(endDate);
+        const rStart = new Date(contractType === 'Venda' ? (eventDate || new Date().toISOString().split('T')[0]) : startDate);
+        const rEnd = new Date(contractType === 'Venda' ? (eventDate || new Date().toISOString().split('T')[0]) : endDate);
         rStart.setHours(0, 0, 0, 0);
         rEnd.setHours(0, 0, 0, 0);
 
@@ -196,7 +196,7 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
         });
 
         return Object.values(groups);
-    }, [items, contracts, startDate, endDate, searchTerm, catFilter]);
+    }, [items, contracts, startDate, endDate, eventDate, contractType, searchTerm, catFilter]);
 
     const filteredClients = useMemo(() => {
         if (!clientSearch) return clients.slice(0, 100); // Show recent or first 100 if empty
@@ -1309,7 +1309,7 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                             (step === 1 && (
                                 isCreatingNewClient
                                     ? (!newClientDetails.name || !newClientDetails.phone)
-                                    : (!startDate || !endDate || !clientId)
+                                    : (contractType === 'Aluguel' ? (!startDate || !endDate || !clientId) : (!eventDate || !clientId))
                             )) ||
                             (step === 2 && selectedItemIds.length === 0) ||
                             (step === 3 && !isClientValid)
