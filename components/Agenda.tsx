@@ -402,11 +402,16 @@ export default function Agenda() {
                                 return (
                                     <div key={contract.id} className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all group">
                                         <div className="flex justify-between items-start mb-3">
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-2">
                                                 <div className="size-8 rounded-full bg-gray-100 bg-cover bg-center shrink-0" style={{ backgroundImage: `url('${client?.img || ''}')` }}></div>
                                                 <div className="min-w-0">
                                                     <h4 className="text-xs font-bold text-navy truncate max-w-[120px]">{client?.name}</h4>
-                                                    <p className="text-[10px] text-gray-500">#{contract.id.split('-')[2]}</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-[10px] text-gray-500">#{contract.id.split('-')[2]}</p>
+                                                        {contract.contractType === 'Venda' && (
+                                                            <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1 rounded">VENDA</span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                             <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${contract.status === 'Ativo' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
@@ -667,8 +672,11 @@ export default function Agenda() {
                                                             title={`#${c.id} - ${c.eventType}`}
                                                         >
                                                             {isStart && ( // Show identifier ONLY at the true start of the contract
-                                                                <span className="truncate w-full pr-1">
-                                                                    #{c.id.split('-')[2]} {c.items.length > 0 ? `• ${items.find(it => it.id === c.items[0])?.name}` : ''}
+                                                                <span className="truncate w-full pr-1 flex items-center gap-1">
+                                                                    {c.contractType === 'Venda' && (
+                                                                        <span className="bg-emerald-500 text-[8px] px-1 rounded shadow-sm shrink-0 leading-tight">VENDA</span>
+                                                                    )}
+                                                                    <span className="truncate">#{c.id.split('-')[2]} {c.items.length > 0 ? `• ${items.find(it => it.id === c.items[0])?.name}` : ''}</span>
                                                                 </span>
                                                             )}
                                                             {isEnd && (

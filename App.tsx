@@ -107,10 +107,10 @@ export default function App() {
           `}
       >
         {/* Brand */}
-        <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between px-6'} py-6 relative group`}>
+        <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center p-2' : 'justify-center p-4'} relative group border-b border-gray-50`}>
           {!isSidebarCollapsed && (
             IMAGES.logo ? (
-              <img src={IMAGES.logo} alt="Logo" className="w-full h-auto max-h-20 object-contain px-2" />
+              <img src={IMAGES.logo} alt="Logo" className="w-full h-auto max-h-32 object-contain" />
             ) : (
               <div className="flex items-center gap-3">
                 <div className="size-8 rounded bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
