@@ -7,10 +7,11 @@ export default function SystemHistory() {
     const [loading, setLoading] = useState(false);
 
     // Filters
-    const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
-    const [dateRange, setDateRange] = useState({ start: today, end: today });
+    // Filters
+    const [dateRange, setDateRange] = useState({ start: '', end: '' });
     const [selectedUser, setSelectedUser] = useState('Todos usuários');
     const [selectedModule, setSelectedModule] = useState('Todos módulos');
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Dropdown data
     const [availableUsers, setAvailableUsers] = useState<any[]>([]);
@@ -26,8 +27,11 @@ export default function SystemHistory() {
     }, []);
 
     useEffect(() => {
-        fetchLogs();
-    }, [currentPage, itemsPerPage, selectedUser, selectedModule, dateRange]);
+        const timeoutId = setTimeout(() => {
+            fetchLogs();
+        }, 500); // Debounce search
+        return () => clearTimeout(timeoutId);
+    }, [currentPage, itemsPerPage, selectedUser, selectedModule, dateRange, searchQuery]);
 
     const fetchUsers = async () => {
         try {
@@ -48,6 +52,7 @@ export default function SystemHistory() {
 
             if (selectedUser !== 'Todos usuários') params.user = selectedUser;
             if (selectedModule !== 'Todos módulos') params.module = selectedModule;
+            if (searchQuery) params.search = searchQuery;
             if (dateRange.start && dateRange.end) {
                 params.startDate = dateRange.start;
                 params.endDate = dateRange.end;
@@ -84,19 +89,32 @@ export default function SystemHistory() {
                 {/* Filters Bar */}
                 <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex flex-wrap gap-4 items-center">
                     {/* Date Range Picker Placeholder - Interactive for future improvement, simplified for now */}
+                    {/* Search Bar */}
+                    <div className="flex-1 min-w-[200px] relative">
+                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
+                        <input
+                            type="text"
+                            placeholder="Buscar por descrição..."
+                            value={searchQuery}
+                            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                            className="w-full bg-white border border-gray-200 rounded-lg pl-10 pr-4 py-2 text-sm text-gray-600 outline-none focus:border-blue-500 transition-colors shadow-sm"
+                        />
+                    </div>
+
+                    {/* Date Range Picker Placeholder - Interactive for future improvement, simplified for now */}
                     <div className="flex items-center bg-white border border-gray-200 rounded-lg px-3 py-2 gap-2 shadow-sm">
                         <input
                             type="date"
                             value={dateRange.start}
                             className="text-sm text-gray-600 outline-none font-medium bg-transparent"
-                            onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                            onChange={(e) => { setDateRange(prev => ({ ...prev, start: e.target.value })); setCurrentPage(1); }}
                         />
                         <span className="text-gray-400">-</span>
                         <input
                             type="date"
                             value={dateRange.end}
                             className="text-sm text-gray-600 outline-none font-medium bg-transparent"
-                            onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                            onChange={(e) => { setDateRange(prev => ({ ...prev, end: e.target.value })); setCurrentPage(1); }}
                         />
                     </div>
 
