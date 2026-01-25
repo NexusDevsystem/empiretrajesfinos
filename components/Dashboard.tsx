@@ -6,27 +6,39 @@ export default function Dashboard() {
 
   const stats = useMemo(() => {
     const today = new Date();
-    const todayStr = today.toLocaleDateString('en-CA'); // YYYY-MM-DD
-
-    // Helpers
-    const isOverdue = (dateStr: string) => dateStr < todayStr;
-    const isToday = (dateStr: string) => dateStr === todayStr;
-    const isNext10Days = (dateStr: string) => {
-      const d = new Date(dateStr);
-      // d must be strictly greater than today (start of tomorrow)
-      // Actually "Next 10 days" usually includes today or starts tomorrow?
-      // "Próximos 10 dias" in UI typically implies looking forward. 
-      // The "Hoje" column handles today. So let's do tomorrow -> tomorrow+9
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const limit = new Date(today);
-      limit.setDate(limit.getDate() + 10);
-      return d >= tomorrow && d <= limit;
+    // Normalize today to YYYY-MM-DD string to avoid timezone issues with toLocaleDateString
+    const toYMD = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
     };
 
-    const isInRange = (dateStr: string, start: Date, end: Date) => {
-      const d = new Date(dateStr + 'T12:00:00'); // midday to avoid timezone edge cases with simple date strings
-      return d >= start && d <= end;
+    // Normalizing DB date strings (often ISO) to YYYY-MM-DD
+    const normalizeDate = (dateStr: string) => {
+      if (!dateStr) return '';
+      if (dateStr.includes('T')) return dateStr.split('T')[0];
+      return dateStr;
+    };
+
+    const todayStr = toYMD(today);
+
+    // Helpers
+    const isOverdue = (dateStr: string) => normalizeDate(dateStr) < todayStr;
+    const isToday = (dateStr: string) => normalizeDate(dateStr) === todayStr;
+    const isNext10Days = (dateStr: string) => {
+      const dStr = normalizeDate(dateStr);
+      if (!dStr) return false;
+
+      const target = new Date(dStr + 'T12:00:00');
+      const start = new Date(todayStr + 'T00:00:00');
+      const end = new Date(todayStr + 'T23:59:59');
+      end.setDate(end.getDate() + 10);
+
+      // strictly greater than "end of today" basically implies starting tomorrow?
+      // But typically "Next 10 days" includes upcoming days. 
+      // Let's stick to strict range check on dates objects to be safe
+      return target > new Date(todayStr + 'T23:59:59') && target <= end;
     };
 
     // --- LOGISTICS COUNTS ---
