@@ -359,11 +359,11 @@ export default function NewItemModal({ isOpen, onClose, onSave }: NewItemModalPr
             )}
 
             {step === 'camera' && (
-                <div className="bg-black fixed inset-0 z-[60] flex items-center justify-center p-6 md:p-12 text-white">
-                    <div className="relative w-full max-w-xl aspect-video bg-neutral-900 border border-white/5 overflow-hidden flex flex-col shadow-2xl">
+                <div className="bg-black fixed inset-0 z-[60] flex items-center justify-center p-0 md:p-12 text-white">
+                    <div className="relative w-full h-full md:h-auto md:max-w-xl md:aspect-video bg-neutral-900 md:border md:border-white/5 overflow-hidden flex flex-col shadow-2xl">
                         {/* Minimalist Camera HUD */}
-                        <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start z-10">
-                            <button onClick={stopCamera} className="size-10 border border-white/20 flex items-center justify-center hover:bg-white hover:text-black transition-all">
+                        <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start z-10 bg-gradient-to-b from-black/50 to-transparent">
+                            <button onClick={stopCamera} className="size-10 border border-white/20 flex items-center justify-center hover:bg-white hover:text-black transition-all rounded-full bg-black/20 backdrop-blur-sm">
                                 <span className="material-symbols-outlined text-xl">close</span>
                             </button>
                             <span className="text-white/40 text-[8px] font-bold uppercase tracking-[0.5em] mt-3">Cam View_01</span>
@@ -372,8 +372,17 @@ export default function NewItemModal({ isOpen, onClose, onSave }: NewItemModalPr
 
                         {/* Video Arena (Compact) */}
                         <div className="flex-1 relative bg-black flex items-center justify-center overflow-hidden">
-                            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover opacity-80" />
-                            <div className="absolute inset-8 border border-white/5 pointer-events-none" />
+                            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover opacity-100" />
+                            <div className="absolute inset-8 border border-white/5 pointer-events-none hidden md:block" />
+                            {/* Mobile guide overlay */}
+                            <div className="absolute inset-0 border-[30px] border-black/30 pointer-events-none md:hidden pt-20 pb-32">
+                                <div className="w-full h-full border border-white/20 relative">
+                                    <div className="absolute top-0 left-0 size-4 border-t-2 border-l-2 border-white/50"></div>
+                                    <div className="absolute top-0 right-0 size-4 border-t-2 border-r-2 border-white/50"></div>
+                                    <div className="absolute bottom-0 left-0 size-4 border-b-2 border-l-2 border-white/50"></div>
+                                    <div className="absolute bottom-0 right-0 size-4 border-b-2 border-r-2 border-white/50"></div>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Sharp Trigger (Compact) */}
