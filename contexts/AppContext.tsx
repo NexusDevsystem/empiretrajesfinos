@@ -182,14 +182,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<AuthUser | null>(null);
     const [profile, setProfile] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [storeSettings, setStoreSettings] = useState<any>({
-        store_name: 'Empire Trajes Finos',
-        store_cnpj: '52.377.689/0001-71',
-        store_address: 'Av. Transmangueirão, Belém - PA',
-        store_phone: '(91) 98428-7746',
-        store_email: 'empiretrajesfinos@gmail.com',
-        store_instagram: '@empiretrajesfinos'
+    const [storeSettings, setStoreSettings] = useState<any>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('empire_trajes_store_settings');
+            if (saved) return JSON.parse(saved);
+        }
+        return {
+            store_name: 'Empire Trajes Finos',
+            store_cnpj: '52.377.689/0001-71',
+            store_address: 'Av. Transmangueirão, Belém - PA',
+            store_phone: '(91) 98428-7746',
+            store_email: 'empiretrajesfinos@gmail.com',
+            store_instagram: '@empiretrajesfinos',
+            monthly_goal: 15000
+        };
     });
+
+    // Persist settings changes
+    useEffect(() => {
+        localStorage.setItem('empire_trajes_store_settings', JSON.stringify(storeSettings));
+    }, [storeSettings]);
     const [notifications, setNotifications] = useState<any[]>([]);
 
     const unreadCount = notifications.filter(n => !n.read).length;

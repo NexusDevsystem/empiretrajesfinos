@@ -8,8 +8,15 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export default function Financial() {
-    const { contracts, transactions, clients } = useApp();
+    const { contracts, transactions, clients, storeSettings, updateStoreSettings } = useApp();
     const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
+    const [isEditingGoal, setIsEditingGoal] = useState(false);
+    const [tempGoal, setTempGoal] = useState(15000);
+
+    const handleSaveGoal = () => {
+        updateStoreSettings({ ...storeSettings, monthly_goal: tempGoal });
+        setIsEditingGoal(false);
+    };
 
     const handleGenerateReport = () => {
         const doc = new jsPDF();
@@ -328,21 +335,52 @@ export default function Financial() {
                 </div>
 
                 {/* 2. Monthly Goal (Progress Card) */}
-                <div className="bg-white rounded-2xl md:rounded-[32px] p-6 md:p-8 border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-center relative overflow-hidden">
+                <div className="bg-white rounded-2xl md:rounded-[32px] p-6 md:p-8 border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-center relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-6 md:p-8 opacity-5">
                         <span className="material-symbols-outlined text-6xl md:text-8xl">flag</span>
                     </div>
-                    <h3 className="text-navy font-bold text-base md:text-lg mb-4 md:mb-6 relative z-10">Meta Mensal</h3>
+
+                    <div className="relative z-10 flex justify-between items-start mb-4 md:mb-6">
+                        <h3 className="text-navy font-bold text-base md:text-lg">Meta Mensal</h3>
+                        <button
+                            onClick={() => {
+                                if (isEditingGoal) {
+                                    handleSaveGoal();
+                                } else {
+                                    setTempGoal(storeSettings?.monthly_goal || 15000);
+                                    setIsEditingGoal(true);
+                                }
+                            }}
+                            className="size-8 rounded-full bg-gray-50 text-gray-400 hover:bg-primary hover:text-white flex items-center justify-center transition-all"
+                            title={isEditingGoal ? "Salvar" : "Editar Meta"}
+                        >
+                            <span className="material-symbols-outlined text-base">{isEditingGoal ? 'check' : 'edit'}</span>
+                        </button>
+                    </div>
 
                     <div className="relative z-10">
                         <div className="flex justify-between items-end mb-2">
-                            <span className="text-3xl md:text-4xl font-black text-navy">{Math.min(100, Math.round((financialStats.totalRevenue / 15000) * 100))}%</span>
-                            <span className="text-[10px] md:text-xs font-bold text-gray-400 mb-1">Meta: R$ 15k</span>
+                            <span className="text-3xl md:text-4xl font-black text-navy">{Math.min(100, Math.round((financialStats.totalRevenue / (storeSettings?.monthly_goal || 15000)) * 100))}%</span>
+
+                            {isEditingGoal ? (
+                                <div className="flex flex-col items-end">
+                                    <label className="text-[10px] text-gray-400 font-bold uppercase mb-1">Nova Meta (R$)</label>
+                                    <input
+                                        type="number"
+                                        value={tempGoal}
+                                        onChange={(e) => setTempGoal(Number(e.target.value))}
+                                        className="w-24 text-right border-b border-primary outline-none font-bold text-navy bg-transparent"
+                                        autoFocus
+                                    />
+                                </div>
+                            ) : (
+                                <span className="text-[10px] md:text-xs font-bold text-gray-400 mb-1">Meta: R$ {(storeSettings?.monthly_goal || 15000).toLocaleString('pt-BR')}</span>
+                            )}
                         </div>
                         <div className="h-3 md:h-4 bg-gray-100 rounded-full overflow-hidden">
                             <div
                                 className="h-full bg-gradient-to-r from-navy to-primary rounded-full transition-all duration-1000"
-                                style={{ width: `${Math.min(100, (financialStats.totalRevenue / 15000) * 100)}%` }}
+                                style={{ width: `${Math.min(100, (financialStats.totalRevenue / (storeSettings?.monthly_goal || 15000)) * 100)}%` }}
                             ></div>
                         </div>
                         <p className="text-[10px] md:text-xs text-gray-400 mt-3 md:mt-4 text-center">Referente apenas a <strong>faturamento realizado</strong>.</p>

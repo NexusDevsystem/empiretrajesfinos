@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { Receipt } from '../types';
 import { receiptsAPI } from '../services/api';
@@ -12,6 +13,7 @@ export default function Receipts() {
     const [showNewModal, setShowNewModal] = useState(false);
     const [printReceipt, setPrintReceipt] = useState<Receipt | null>(null);
     const [receiptToDelete, setReceiptToDelete] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Form State
     const [newReceipt, setNewReceipt] = useState<Partial<Receipt>>({
@@ -71,6 +73,14 @@ export default function Receipts() {
         }
     };
 
+    const filteredReceipts = useMemo(() => {
+        return receipts.filter(r =>
+            r.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            r.number.toString().includes(searchTerm) ||
+            r.concept.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [receipts, searchTerm]);
+
     return (
         <div className="h-full flex flex-col bg-bg-light">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
@@ -78,31 +88,46 @@ export default function Receipts() {
                     <h1 className="text-2xl font-black text-navy tracking-tight">Recibos</h1>
                     <p className="text-sm text-gray-400 font-medium">Gerenciamento e emissão de recibos</p>
                 </div>
-                <button
-                    onClick={() => setShowNewModal(true)}
-                    className="w-full md:w-auto h-12 md:h-10 px-4 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/30 hover:bg-primary/90 flex items-center justify-center gap-2 active:scale-95 transition-all"
-                >
-                    <span className="material-symbols-outlined text-[20px]">add</span>
-                    Novo Recibo
-                </button>
+
+                <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                    <div className="relative w-full md:w-64">
+                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">search</span>
+                        <input
+                            type="text"
+                            placeholder="Buscar recibos..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full h-10 md:h-10 pl-9 pr-4 rounded-xl border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
+                        />
+                    </div>
+                    <button
+                        onClick={() => setShowNewModal(true)}
+                        className="w-full md:w-auto h-12 md:h-10 px-4 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/30 hover:bg-primary/90 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                    >
+                        <span className="material-symbols-outlined text-[20px]">add</span>
+                        Novo Recibo
+                    </button>
+                </div>
             </header>
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex-1 overflow-hidden flex flex-col">
                 {isLoading ? (
                     <div className="p-8 text-center text-gray-400">Carregando...</div>
-                ) : receipts.length === 0 ? (
+                ) : filteredReceipts.length === 0 ? (
                     <div className="p-12 text-center flex flex-col items-center justify-center h-full">
                         <div className="size-16 rounded-full bg-gray-50 flex items-center justify-center mb-4">
                             <span className="material-symbols-outlined text-3xl text-gray-300">receipt_long</span>
                         </div>
-                        <h3 className="text-navy font-bold text-lg">Nenhum recibo encontrado</h3>
-                        <p className="text-gray-400 text-sm mt-1 max-w-xs mx-auto">Emita recibos avulsos ou através dos contratos para manter o histórico organizado.</p>
+                        <h3 className="text-navy font-bold text-lg">{searchTerm ? 'Nenhum resultado encontrado' : 'Nenhum recibo encontrado'}</h3>
+                        <p className="text-gray-400 text-sm mt-1 max-w-xs mx-auto">
+                            {searchTerm ? 'Tente buscar por outro termo.' : 'Emita recibos avulsos ou através dos contratos para manter o histórico organizado.'}
+                        </p>
                     </div>
                 ) : (
                     <>
                         {/* Mobile View - Cards */}
                         <div className="md:hidden overflow-auto flex-1 p-4 space-y-3">
-                            {receipts.map(receipt => (
+                            {filteredReceipts.map(receipt => (
                                 <div key={receipt.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:border-primary/30 transition-all">
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="bg-navy/5 px-2 py-1 rounded text-xs font-mono font-bold text-navy">
@@ -154,7 +179,7 @@ export default function Receipts() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
-                                    {receipts.map(receipt => (
+                                    {filteredReceipts.map(receipt => (
                                         <tr key={receipt.id} className="hover:bg-blue-50/30 group transition-colors">
                                             <td className="p-4 font-mono text-xs font-bold text-gray-500">#{receipt.number.toString().padStart(4, '0')}</td>
                                             <td className="p-4 font-bold text-navy">{receipt.clientName}</td>
