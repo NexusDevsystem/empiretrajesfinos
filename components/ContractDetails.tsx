@@ -8,6 +8,7 @@ import { getContractColor } from '../utils/colorUtils';
 import { receiptsAPI } from '../services/api';
 import { Receipt } from '../types';
 import PrintableReceipt from './PrintableReceipt';
+import ContractItemsEditor from './ContractItemsEditor';
 
 interface ContractDetailsProps {
     contract: Contract;
@@ -18,14 +19,16 @@ interface ContractDetailsProps {
 }
 
 export default function ContractDetails({ contract, client, items, onClose, onPrint }: ContractDetailsProps) {
-    const { updateContractStatus, updateItem, updateContract } = useApp();
+    const { updateContractStatus, updateItem, updateContract, deleteContract } = useApp();
     const { showToast } = useToast();
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
     const [sigType, setSigType] = useState<'lessee' | 'attendant'>('lessee');
     const [createdReceipt, setCreatedReceipt] = useState<Receipt | null>(null);
     const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
     const [isReceiptConfirmOpen, setIsReceiptConfirmOpen] = useState(false);
+    const [isEditItemsOpen, setIsEditItemsOpen] = useState(false);
 
     const handleCancelContract = () => {
         // 1. Update Contract Status
@@ -38,6 +41,24 @@ export default function ContractDetails({ contract, client, items, onClose, onPr
 
         showToast('info', 'Contrato cancelado e itens liberados.');
         onClose();
+    };
+
+    const handleDeleteContract = async () => {
+        try {
+            // 1. Delete Contract
+            await deleteContract(contract.id);
+
+            // 2. Release Items (if not already released)
+            contract.items.forEach(itemId => {
+                updateItem(itemId, { status: 'Disponível', statusColor: 'primary' });
+            });
+
+            showToast('success', 'Contrato excluído permanentemente.');
+            onClose();
+        } catch (error) {
+            console.error('Erro ao excluir contrato:', error);
+            showToast('error', 'Erro ao excluir contrato.');
+        }
     };
 
     const handleOpenSig = (type: 'lessee' | 'attendant') => {
@@ -357,9 +378,20 @@ export default function ContractDetails({ contract, client, items, onClose, onPr
 
                     {/* Items List */}
                     <section>
-                        <h3 className="text-xs font-bold text-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <span className="material-symbols-outlined text-sm">checkroom</span>
-                            Itens do Contrato
+                        <h3 className="text-xs font-bold text-black uppercase tracking-widest mb-4 flex items-center gap-2 justify-between">
+                            <div className="flex items-center gap-2">
+                                <span className="material-symbols-outlined text-sm">checkroom</span>
+                                Itens do Contrato
+                            </div>
+                            {(contract.status === 'Agendado' || contract.status === 'Rascunho') && (
+                                <button
+                                    onClick={() => setIsEditItemsOpen(true)}
+                                    className="text-[10px] bg-primary/10 text-primary hover:bg-primary hover:text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                                >
+                                    <span className="material-symbols-outlined text-[14px]">edit</span>
+                                    Editar Itens
+                                </button>
+                            )}
                         </h3>
                         <div className="space-y-3">
                             {items.map(item => (
@@ -468,24 +500,35 @@ export default function ContractDetails({ contract, client, items, onClose, onPr
                 </div>
 
                 {/* Footer Actions */}
-                <div className="p-4 md:p-6 border-t border-gray-200 bg-white flex flex-col sm:flex-row gap-3">
-                    {(contract.status === 'Agendado' || contract.status === 'Ativo') && (
+                {/* Footer Actions */}
+                <div className="p-4 border-t border-gray-200 bg-white flex flex-col sm:flex-row gap-4 justify-between items-end sm:items-center">
+                    {/* Left Actions (Destructive) - Stacked Vertically */}
+                    <div className="flex flex-col gap-2 w-full sm:w-auto">
+                        {(contract.status === 'Agendado' || contract.status === 'Ativo') && (
+                            <button
+                                onClick={() => setIsCancelModalOpen(true)}
+                                className="w-full px-5 py-2 rounded-xl font-bold bg-white text-red-500 border border-red-100 hover:bg-red-50 transition-colors flex items-center justify-center gap-2 text-xs"
+                            >
+                                <span className="material-symbols-outlined text-xs">block</span>
+                                Cancelar
+                            </button>
+                        )}
+
                         <button
-                            onClick={() => setIsCancelModalOpen(true)}
-                            className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold bg-white text-red-500 border border-red-100 hover:bg-red-50 transition-colors flex items-center justify-center gap-2 text-sm"
+                            onClick={() => setIsDeleteModalOpen(true)}
+                            className="w-full px-5 py-2 rounded-xl font-bold bg-white text-gray-400 border border-gray-100 hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-colors flex items-center justify-center gap-2 text-xs"
                         >
-                            <span className="material-symbols-outlined text-sm">block</span>
-                            Cancelar
+                            <span className="material-symbols-outlined text-xs">delete</span>
+                            Excluir
                         </button>
-                    )}
+                    </div>
 
-                    <div className="hidden sm:block flex-1"></div>
-
-                    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                    {/* Right Actions (Operational) - Horizontal Row */}
+                    <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-center sm:justify-end">
                         <button
                             onClick={() => handleOpenSig('lessee')}
                             disabled={contract.isPhysicallySigned}
-                            className={`px-6 py-3 rounded-xl font-bold border transition-all flex items-center justify-center gap-2 text-sm ${(contract.lesseeSignature || contract.isPhysicallySigned) && contract.attendantSignature
+                            className={`px-4 py-3 rounded-xl font-bold border transition-all flex items-center justify-center gap-2 text-sm ${(contract.lesseeSignature || contract.isPhysicallySigned) && contract.attendantSignature
                                 ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
                                 : 'bg-white text-navy border-navy/20 hover:bg-gray-50'
                                 } ${contract.isPhysicallySigned ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -493,27 +536,27 @@ export default function ContractDetails({ contract, client, items, onClose, onPr
                             <span className="material-symbols-outlined text-sm">
                                 {(contract.lesseeSignature || contract.isPhysicallySigned) && contract.attendantSignature ? 'check_circle' : 'ink_pen'}
                             </span>
-                            {contract.isPhysicallySigned ? 'Assinado Manual' : (contract.lesseeSignature && contract.attendantSignature ? 'Contrato Assinado' : 'Coletar Assinatura')}
+                            {contract.isPhysicallySigned ? 'Assinado Manual' : (contract.lesseeSignature && contract.attendantSignature ? 'Assinado' : 'Assinar')}
                         </button>
 
                         <button
                             onClick={onPrint}
-                            className={`px-6 py-3 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 text-sm ${(contract.lesseeSignature || contract.isPhysicallySigned) && contract.attendantSignature
+                            className={`px-4 py-3 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 text-sm ${(contract.lesseeSignature || contract.isPhysicallySigned) && contract.attendantSignature
                                 ? 'bg-emerald-600 shadow-emerald-600/20 hover:bg-emerald-700'
                                 : 'bg-navy shadow-navy/20 hover:scale-[1.02] active:scale-95'
                                 }`}
                         >
                             <span className="material-symbols-outlined text-sm">visibility</span>
-                            Visualizar Contrato
+                            Visualizar
                         </button>
 
                         <button
                             onClick={() => setIsReceiptConfirmOpen(true)}
                             disabled={isGeneratingReceipt}
-                            className="px-6 py-3 rounded-xl font-bold bg-white text-navy border border-navy/20 hover:bg-blue-50 transition-all flex items-center justify-center gap-2 text-sm"
+                            className="px-4 py-3 rounded-xl font-bold bg-white text-navy border border-navy/20 hover:bg-blue-50 transition-all flex items-center justify-center gap-2 text-sm"
                         >
                             <span className="material-symbols-outlined text-sm">receipt_long</span>
-                            {isGeneratingReceipt ? 'Gerando...' : 'Gerar Recibo'}
+                            Recibo
                         </button>
                     </div>
                 </div>
@@ -552,12 +595,14 @@ export default function ContractDetails({ contract, client, items, onClose, onPr
             />
 
             {/* Receipt Modal */}
-            {createdReceipt && (
-                <PrintableReceipt
-                    receipt={createdReceipt}
-                    onClose={() => setCreatedReceipt(null)}
-                />
-            )}
+            {
+                createdReceipt && (
+                    <PrintableReceipt
+                        receipt={createdReceipt}
+                        onClose={() => setCreatedReceipt(null)}
+                    />
+                )
+            }
 
             {/* Signature Modal Integration */}
             <SignatureModal
@@ -577,6 +622,26 @@ export default function ContractDetails({ contract, client, items, onClose, onPr
                 confirmText="Sim, Cancelar Contrato"
                 isDangerous={true}
             />
+
+            {/* Delete Modal */}
+            <ConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={handleDeleteContract}
+                title="Excluir Contrato Permanentemente"
+                description="Tem certeza que deseja EXCLUIR este contrato? Esta ação não pode ser desfeita e todos os dados serão perdidos. Os itens vinculados serão liberados."
+                confirmText="Sim, Excluir Permanentemente"
+                isDangerous={true}
+            />
+
+            {/* Edit Items Modal */}
+            {isEditItemsOpen && (
+                <ContractItemsEditor
+                    contract={contract}
+                    isOpen={isEditItemsOpen}
+                    onClose={() => setIsEditItemsOpen(false)}
+                />
+            )}
         </div>
     );
 }

@@ -127,7 +127,7 @@ export default function Contracts() {
                         <div
                             key={contract.id}
                             onClick={() => setSelectedContract(contract)}
-                            className={`group relative bg-white rounded-3xl border border-gray-100/80 shadow-sm cursor-pointer transition-all duration-500 hover:shadow-2xl hover:shadow-navy/5 hover:-translate-y-1 overflow-hidden flex flex-col md:flex-row items-stretch min-h-[100px] ${selectedContract?.id === contract.id ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+                            className={`group relative bg-white rounded-3xl border border-gray-100/80 shadow-sm cursor-pointer transition-all duration-500 hover:shadow-lg hover:shadow-navy/5 overflow-hidden flex flex-col md:flex-row items-stretch min-h-[100px] ${selectedContract?.id === contract.id ? 'ring-2 ring-primary ring-offset-2' : ''}`}
                         >
                             {/* Left Accent Bar */}
                             <div className="w-1.5 md:w-2 shrink-0 transition-all duration-500 group-hover:w-3" style={{ backgroundColor: contractColor }}></div>
@@ -137,7 +137,7 @@ export default function Contracts() {
                                 {/* 1. Client & Identity */}
                                 <div className="flex items-center gap-4 w-full md:w-auto min-w-[20%]">
                                     <div className="relative shrink-0">
-                                        <div className="size-12 md:size-14 rounded-2xl bg-gray-50 flex items-center justify-center border border-gray-100 transition-transform group-hover:scale-105 duration-500">
+                                        <div className="size-12 md:size-14 rounded-2xl bg-gray-50 flex items-center justify-center border border-gray-100 transition-transform duration-500">
                                             <span className="text-base md:text-lg font-black text-navy/30 tracking-tighter">
                                                 {getInitials(clientName)}
                                             </span>
@@ -205,7 +205,7 @@ export default function Contracts() {
                                     </div>
 
                                     <div className="shrink-0">
-                                        <div className="size-10 md:size-12 rounded-2xl bg-navy text-white flex items-center justify-center transition-all group-hover:scale-110 group-active:scale-95 shadow-lg shadow-navy/20">
+                                        <div className="size-10 md:size-12 rounded-2xl bg-navy text-white flex items-center justify-center transition-all group-active:scale-95 shadow-lg shadow-navy/20">
                                             <span className="material-symbols-outlined text-lg md:text-xl">arrow_forward</span>
                                         </div>
                                     </div>

@@ -137,9 +137,12 @@ export default function PrintableContract({ contract, client, items, onClose }: 
 
                 {/* Clean Typographic Header */}
                 <div className="flex justify-between items-baseline border-b border-navy/20 pb-2 mb-4">
-                    <div>
-                        <h1 className="text-4xl font-serif tracking-tight text-navy">EMPIRE</h1>
-                        <p className="text-[10px] uppercase tracking-[0.5em] text-black mt-1 font-sans font-black">Trajes Finos</p>
+                    <div className="flex items-center gap-4">
+                        <img src="/assets/coroapreta.png" alt="Empire Logo" className="h-16 w-auto object-contain" />
+                        <div>
+                            <h1 className="text-4xl font-serif tracking-tight text-navy">EMPIRE</h1>
+                            <p className="text-[10px] uppercase tracking-[0.5em] text-black mt-1 font-sans font-black">Trajes Finos</p>
+                        </div>
                     </div>
                     <div className="text-right font-sans">
                         <p className="text-[12px] font-black uppercase tracking-widest text-navy">{storeSettings?.store_name || 'Empire Trajes Finos'}</p>

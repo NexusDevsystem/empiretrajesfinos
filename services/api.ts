@@ -188,6 +188,10 @@ export const settingsAPI = {
     getAll: async () => {
         const { data } = await api.get('/settings');
         return data;
+    },
+    update: async (data: any) => {
+        const response = await api.put('/settings', data);
+        return response.data;
     }
 };
 

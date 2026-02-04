@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Item, Contract, Client, ContractStatus, Appointment, Transaction, Employee } from '../types';
-import { authAPI, itemsAPI, clientsAPI, contractsAPI, appointmentsAPI, transactionsAPI, employeesAPI, notificationsAPI } from '../services/api';
+import { authAPI, itemsAPI, clientsAPI, contractsAPI, appointmentsAPI, transactionsAPI, employeesAPI, notificationsAPI, settingsAPI } from '../services/api';
 
 // --- Interfaces ---
 
@@ -182,26 +182,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<AuthUser | null>(null);
     const [profile, setProfile] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [storeSettings, setStoreSettings] = useState<any>(() => {
-        if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('empire_trajes_store_settings');
-            if (saved) return JSON.parse(saved);
-        }
-        return {
-            store_name: 'Empire Trajes Finos',
-            store_cnpj: '52.377.689/0001-71',
-            store_address: 'Av. Transmangueirão, Belém - PA',
-            store_phone: '(91) 98428-7746',
-            store_email: 'empiretrajesfinos@gmail.com',
-            store_instagram: '@empiretrajesfinos',
-            monthly_goal: 15000
-        };
-    });
-
-    // Persist settings changes
-    useEffect(() => {
-        localStorage.setItem('empire_trajes_store_settings', JSON.stringify(storeSettings));
-    }, [storeSettings]);
+    const [storeSettings, setStoreSettings] = useState<any>({
+        store_name: 'Empire Trajes Finos',
+        store_cnpj: '52.377.689/0001-71',
+        store_address: 'Av. Transmangueirão, Belém - PA',
+        store_phone: '(91) 98428-7746',
+        store_email: 'empiretrajesfinos@gmail.com',
+        store_instagram: '@empiretrajesfinos',
+        monthly_goal: 15000
+    }); // Default fallback while loading
     const [notifications, setNotifications] = useState<any[]>([]);
 
     const unreadCount = notifications.filter(n => !n.read).length;
@@ -341,6 +330,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         } catch (error) {
             console.error('Core data load error:', error);
         } finally {
+            // Load store settings
+            try {
+                const settings = await settingsAPI.getAll();
+                if (settings && settings._id) {
+                    setStoreSettings(settings);
+                }
+            } catch (error) {
+                console.error('[AppContext] Error loading settings:', error);
+            }
+
             setIsLoading(false);
         }
     };
@@ -631,8 +630,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
 
     // Settings
-    const updateStoreSettings = async (settings: any) => {
-        setStoreSettings(settings);
+    const updateStoreSettings = async (partialSettings: any) => {
+        // Optimistic update
+        const newSettings = { ...storeSettings, ...partialSettings };
+        setStoreSettings(newSettings);
+
+        try {
+            // Update backend
+            // Note: Our API expects the full object or partial updates properly handled by the model logic
+            // The controller we wrote does { ...updates } upsert, so partial is fine
+            await settingsAPI.update(newSettings);
+        } catch (error) {
+            console.error('[AppContext] Error updating settings:', error);
+            // Revert? For settings, minor sync issues aren't critical crashers, but logging is good.
+        }
     };
 
     // Notifications

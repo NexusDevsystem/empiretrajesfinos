@@ -1,14 +1,49 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../contexts/AppContext';
 
 export default function Settings() {
     const { signOut, storeSettings, updateStoreSettings } = useApp();
+    const [formData, setFormData] = useState<any>(storeSettings || {});
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (storeSettings) {
+            setFormData(storeSettings);
+        }
+    }, [storeSettings]);
+
+    const handleChange = (field: string, value: string) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            await updateStoreSettings(formData);
+            alert('Configurações salvas com sucesso!');
+        } catch (error) {
+            console.error('Erro ao salvar:', error);
+            alert('Erro ao salvar. Tente novamente.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     return (
         <div className="max-w-4xl mx-auto pb-10">
-            <div className="mb-8">
-                <h1 className="text-navy text-3xl font-black leading-tight tracking-tight">Configurações</h1>
-                <p className="text-gray-500 text-sm">Preferências do sistema e da loja.</p>
+            <div className="mb-8 flex justify-between items-end">
+                <div>
+                    <h1 className="text-navy text-3xl font-black leading-tight tracking-tight">Configurações</h1>
+                    <p className="text-gray-500 text-sm">Preferências do sistema e da loja.</p>
+                </div>
+                <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="px-6 py-2.5 bg-navy text-white font-bold rounded-xl shadow-lg shadow-navy/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <span className="material-symbols-outlined text-sm">save</span>
+                    {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+                </button>
             </div>
 
             <div className="space-y-6">
@@ -20,16 +55,16 @@ export default function Settings() {
                             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nome da Loja</label>
                             <input
                                 className="w-full h-11 px-3 rounded-lg border border-gray-200 bg-gray-50 text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                defaultValue={storeSettings.store_name}
-                                onBlur={(e) => updateStoreSettings('store_name', e.target.value)}
+                                value={formData.store_name || ''}
+                                onChange={(e) => handleChange('store_name', e.target.value)}
                             />
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">CNPJ</label>
                             <input
                                 className="w-full h-11 px-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                defaultValue={storeSettings.store_cnpj}
-                                onBlur={(e) => updateStoreSettings('store_cnpj', e.target.value)}
+                                value={formData.store_cnpj || ''}
+                                onChange={(e) => handleChange('store_cnpj', e.target.value)}
                                 placeholder="00.000.000/0001-00"
                             />
                         </div>
@@ -37,9 +72,27 @@ export default function Settings() {
                             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Endereço</label>
                             <input
                                 className="w-full h-11 px-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                defaultValue={storeSettings.store_address}
-                                onBlur={(e) => updateStoreSettings('store_address', e.target.value)}
+                                value={formData.store_address || ''}
+                                onChange={(e) => handleChange('store_address', e.target.value)}
                                 placeholder="Rua das Flores, 123 - Centro"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Telefone / WhatsApp</label>
+                            <input
+                                className="w-full h-11 px-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                value={formData.store_phone || ''}
+                                onChange={(e) => handleChange('store_phone', e.target.value)}
+                                placeholder="(99) 99999-9999"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Instagram</label>
+                            <input
+                                className="w-full h-11 px-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                value={formData.store_instagram || ''}
+                                onChange={(e) => handleChange('store_instagram', e.target.value)}
+                                placeholder="@loja"
                             />
                         </div>
                     </div>

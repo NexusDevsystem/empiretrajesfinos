@@ -200,7 +200,7 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
     }, [items, contracts, startDate, endDate, eventDate, contractType, searchTerm, catFilter]);
 
     const eventTypes = useMemo(() => {
-        const defaultTypes = ['Casamento', 'Formatura', 'Debutante', 'Noivado', 'Corporativo', 'Outro'];
+        const defaultTypes = ['Casamento', 'Formatura', 'Debutante', '15 Anos', 'Noivado', 'Corporativo', 'Outro'];
         const existingTypes = contracts.map(c => c.eventType).filter(Boolean);
         return Array.from(new Set([...defaultTypes, ...existingTypes]));
     }, [contracts]);
@@ -836,23 +836,43 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                                 )}
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-black uppercase">Tipo de Evento <span className="text-red-500">*</span></label>
-                                <div className="relative group">
+                            {/* Event Type (Custom Styled Dropdown) */}
+                            <div className="relative group/dropdown">
+                                <label className="text-[10px] font-black text-navy uppercase tracking-widest mb-1 block">
+                                    Tipo de Evento <span className="text-red-500">*</span>
+                                </label>
+                                <div className="relative">
                                     <input
-                                        list="event-types"
+                                        type="text"
+                                        list="event-types-list-hidden" // Keep native list for accessibility but hide it visually if needed, or just remove
+                                        className="w-full h-11 pl-10 pr-4 rounded-xl border border-gray-200 bg-white text-navy font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 peer"
+                                        placeholder="Selecione ou digite..."
                                         value={eventType}
-                                        onChange={e => setEventType(e.target.value as import('../types').EventType)}
-                                        className="w-full pl-10 pr-10 py-3 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none bg-white font-bold text-navy shadow-sm transition-all"
-                                        placeholder="Selecione ou digite um novo tipo..."
+                                        onChange={(e) => setEventType(e.target.value as import('../types').EventType)}
                                     />
-                                    <datalist id="event-types">
-                                        {eventTypes.map(type => (
-                                            <option key={type} value={type} />
-                                        ))}
-                                    </datalist>
-                                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">celebration</span>
-                                    <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none text-xl group-hover:text-primary transition-colors">arrow_drop_down</span>
+                                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                        <span className="material-symbols-outlined text-lg">celebration</span>
+                                    </div>
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-transform duration-300 peer-focus:rotate-180">
+                                        <span className="material-symbols-outlined text-lg">arrow_drop_down</span>
+                                    </div>
+
+                                    {/* Custom Dropdown List */}
+                                    <div className="absolute top-[110%] left-0 w-full bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden hidden peer-focus:block hover:block z-50">
+                                        <div className="max-h-48 overflow-y-auto p-1">
+                                            {eventTypes.map((type) => (
+                                                <button
+                                                    key={type}
+                                                    type="button"
+                                                    onMouseDown={() => setEventType(type as import('../types').EventType)} // onMouseDown fires before onBlur
+                                                    className="w-full text-left px-3 py-2 rounded-lg text-sm font-bold text-navy hover:bg-navy/5 hover:text-primary transition-colors flex items-center gap-2"
+                                                >
+                                                    <span className="material-symbols-outlined text-sm text-gray-300">navigate_next</span>
+                                                    {type}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 

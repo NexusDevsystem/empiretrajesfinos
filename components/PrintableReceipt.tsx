@@ -87,7 +87,7 @@ export default function PrintableReceipt({ receipt, onClose }: PrintableReceiptP
                     <div className="flex justify-between items-start mb-8 border-b-2 border-navy pb-4">
                         <div className="w-1/2">
                             <div className="flex items-center gap-3 mb-2">
-                                <span className="material-symbols-outlined text-4xl text-navy">diamond</span>
+                                <img src="/assets/coroapreta.png" alt="Empire Logo" className="h-12 w-auto object-contain" />
                                 <div>
                                     <h1 className="text-xl font-bold tracking-widest uppercase text-navy">Empire</h1>
                                     <p className="text-[10px] uppercase tracking-[0.3em] text-gray-500">Trajes Finos</p>
