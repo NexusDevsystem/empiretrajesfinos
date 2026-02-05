@@ -21,7 +21,7 @@ export default function Receipts() {
         clientDoc: '',
         value: 0,
         concept: '',
-        paymentMethod: 'PIX',
+        paymentMethod: 'Pix',
         date: new Date().toISOString().split('T')[0]
     });
 
@@ -53,7 +53,7 @@ export default function Receipts() {
                 clientDoc: '',
                 value: 0,
                 concept: '',
-                paymentMethod: 'PIX',
+                paymentMethod: 'Pix',
                 date: new Date().toISOString().split('T')[0]
             });
         } catch (error) {
@@ -102,7 +102,7 @@ export default function Receipts() {
                     </div>
                     <button
                         onClick={() => setShowNewModal(true)}
-                        className="w-full md:w-auto h-12 md:h-10 px-4 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/30 hover:bg-primary/90 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                        className="w-full md:w-auto h-12 md:h-10 px-4 bg-navy text-white font-bold rounded-xl shadow-lg shadow-navy/20 hover:scale-[1.02] flex items-center justify-center gap-2 active:scale-95 transition-all"
                     >
                         <span className="material-symbols-outlined text-[20px]">add</span>
                         Novo Recibo
@@ -174,6 +174,7 @@ export default function Receipts() {
                                         <th className="p-4 text-[10px] font-black uppercase text-gray-400 tracking-wider">Cliente</th>
                                         <th className="p-4 text-[10px] font-black uppercase text-gray-400 tracking-wider">Descrição / Conceito</th>
                                         <th className="p-4 text-[10px] font-black uppercase text-gray-400 tracking-wider">Data</th>
+                                        <th className="p-4 text-[10px] font-black uppercase text-gray-400 tracking-wider">Forma</th>
                                         <th className="p-4 text-[10px] font-black uppercase text-gray-400 tracking-wider">Valor</th>
                                         <th className="p-4 text-[10px] font-black uppercase text-gray-400 tracking-wider text-right">Ações</th>
                                     </tr>
@@ -185,6 +186,11 @@ export default function Receipts() {
                                             <td className="p-4 font-bold text-navy">{receipt.clientName}</td>
                                             <td className="p-4 text-sm text-gray-600 truncate max-w-[200px]" title={receipt.concept}>{receipt.concept}</td>
                                             <td className="p-4 text-sm text-gray-500">{new Date(receipt.date).toLocaleDateString('pt-BR')}</td>
+                                            <td className="p-4">
+                                                <span className="px-2 py-0.5 rounded-lg border border-gray-100 bg-gray-50 text-[10px] font-black text-navy uppercase tracking-tighter">
+                                                    {receipt.paymentMethod}
+                                                </span>
+                                            </td>
                                             <td className="p-4 font-mono font-bold text-navy">
                                                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(receipt.value)}
                                             </td>
@@ -283,10 +289,11 @@ export default function Receipts() {
                                         value={newReceipt.paymentMethod}
                                         onChange={e => setNewReceipt({ ...newReceipt, paymentMethod: e.target.value })}
                                     >
-                                        <option value="PIX">PIX</option>
-                                        <option value="Cartão de Crédito">Cartão de Crédito</option>
-                                        <option value="Cartão de Débito">Cartão de Débito</option>
+                                        <option value="Pix">Pix</option>
+                                        <option value="Crédito">Cartão de Crédito</option>
+                                        <option value="Débito">Cartão de Débito</option>
                                         <option value="Dinheiro">Dinheiro</option>
+                                        <option value="Link">Link de Pagamento</option>
                                         <option value="Transferência">Transferência</option>
                                     </select>
                                 </div>

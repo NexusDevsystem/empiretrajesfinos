@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useApp } from '../contexts/AppContext';
+import { usePackages, Package } from '../contexts/PackageContext';
 import { Contract, Item } from '../types';
 import { viaCepAPI } from '../services/api';
 
@@ -21,6 +22,7 @@ import { useToast } from '../contexts/ToastContext';
 
 export default function NewContractModal({ isOpen, onClose }: NewContractModalProps) {
     const { clients, items, contracts, addContract, addClient, isItemAvailable, navigateTo, setSelectedContractId, wizardInitialData } = useApp();
+    const { packages } = usePackages();
     const { showToast } = useToast();
     const [step, setStep] = useState(1);
     const [showReminder, setShowReminder] = useState(false);
@@ -46,6 +48,12 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
     const [notes, setNotes] = useState('');
     const [paidAmount, setPaidAmount] = useState<number>(0);
     const [paymentMethod, setPaymentMethod] = useState<string>('Pix');
+
+    // Package Logic
+    const [viewMode, setViewMode] = useState<'items' | 'packages' | 'slot_selection'>('items');
+    const [activeSlotIndex, setActiveSlotIndex] = useState<number | null>(null);
+    const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
+    const [packageSlots, setPackageSlots] = useState<Record<number, string>>({}); // index -> itemId
 
     // Fitting and measurements
     const [fittingDate, setFittingDate] = useState('');
@@ -225,15 +233,25 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                 quantity: selectedItemIds.filter(sid => sid === id).length
             };
         });
-    }, [selectedItemIds, items]);
+    }, [selectedItemIds, items, selectedPackage]);
 
     const subtotal = useMemo(() => {
-        return selectedItemIds.reduce((acc, id) => {
+        let baseValue = 0;
+
+        // Value from avulsos (individual items)
+        baseValue += selectedItemIds.reduce((acc, id) => {
             const item = items.find(i => i.id === id);
             const isSale = saleItemIds.includes(id);
             return acc + (isSale ? (item?.salePrice || item?.price || 0) : (item?.price || 0));
         }, 0);
-    }, [selectedItemIds, saleItemIds, items]);
+
+        // Value from package
+        if (selectedPackage) {
+            baseValue += selectedPackage.price;
+        }
+
+        return baseValue;
+    }, [selectedItemIds, saleItemIds, items, selectedPackage]);
     const total = subtotal - parseFloat(discount || '0');
 
 
@@ -326,8 +344,8 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                 }
             }
         }
-        if (step === 2 && selectedItemIds.length === 0) {
-            showToast('error', 'Selecione pelo menos um item.');
+        if (step === 2 && selectedItemIds.length === 0 && !selectedPackage) {
+            showToast('error', 'Selecione pelo menos um item ou pacote.');
             return;
         }
         setStep(prev => prev + 1);
@@ -400,15 +418,107 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
         }
     };
 
+    const autoFulfillPackageItems = (pkg: Package, silent = false) => {
+        const slots: Record<number, string> = {};
+        const usedIds: string[] = [];
+        let allFulfilled = true;
+        const missingCategories: string[] = [];
+
+        const sDate = contractType === 'Venda' ? (eventDate || new Date().toISOString().split('T')[0]) : startDate;
+        const eDate = contractType === 'Venda' ? (eventDate || new Date().toISOString().split('T')[0]) : endDate;
+
+        if (!sDate || !eDate) {
+            if (!silent) showToast('error', 'Selecione as datas antes de selecionar um pacote.');
+            return false;
+        }
+
+        let currentSlot = 0;
+        pkg.items_config.forEach(cfg => {
+            for (let i = 0; i < cfg.quantity; i++) {
+                // Find first available item of this type not already over-committed in this contract
+                const availableItem = items.find(item => {
+                    if (item.type !== cfg.category) return false;
+
+                    // Availability in other contracts
+                    if (!isItemAvailable(item.id, sDate, eDate)) return false;
+
+                    // Availability in THIS contract (Package Slots + Items Avulsos)
+                    const countInThisPackage = usedIds.filter(id => id === item.id).length;
+                    const countInAvulsos = selectedItemIds.filter(id => id === item.id).length;
+                    const totalInThisContract = countInThisPackage + countInAvulsos;
+
+                    // Get available units across all contracts for this ID
+                    // isItemAvailable logic: return countOfItem(id).filter(overlaps).length < item.totalQuantity
+                    // We need to know HOW MANY are left.
+                    const bufferDays = 2;
+                    const bufferTime = bufferDays * 24 * 60 * 60 * 1000;
+                    const rStart = new Date(sDate);
+                    const rEnd = new Date(eDate);
+                    rStart.setHours(0, 0, 0, 0);
+                    rEnd.setHours(0, 0, 0, 0);
+
+                    const rentedInOtherContracts = contracts.reduce((count, c) => {
+                        if (c.status === 'Cancelado' || c.status === 'Finalizado') return count;
+                        const cStart = new Date(c.startDate);
+                        const cEnd = new Date(c.endDate);
+                        cStart.setHours(0, 0, 0, 0);
+                        cEnd.setHours(0, 0, 0, 0);
+                        const cEndWithBuffer = new Date(cEnd.getTime() + bufferTime);
+                        const overlaps = !(rEnd < cStart || rStart > cEndWithBuffer);
+                        return overlaps ? count + c.items.filter(id => id === item.id).length : count;
+                    }, 0);
+
+                    const leftGlobal = (item.totalQuantity || 1) - rentedInOtherContracts;
+
+                    return totalInThisContract < leftGlobal;
+                });
+
+                if (availableItem) {
+                    slots[currentSlot] = availableItem.id;
+                    usedIds.push(availableItem.id);
+                } else {
+                    allFulfilled = false;
+                    if (!missingCategories.includes(cfg.category)) {
+                        missingCategories.push(cfg.category);
+                    }
+                }
+                currentSlot++;
+            }
+        });
+
+        setPackageSlots(slots);
+
+        if (!silent) {
+            if (!allFulfilled) {
+                showToast('warning', `Alguns itens (${missingCategories.join(', ')}) não possuem unidades disponíveis para estas datas.`, { title: 'Aviso de Estoque' });
+            } else {
+                showToast('success', `Pacote "${pkg.name}" selecionado. Itens do acervo vinculados.`);
+            }
+        }
+
+        return true;
+    };
+
+    // Auto-sync package items when dates change
+    useEffect(() => {
+        if (selectedPackage && (startDate || endDate || eventDate)) {
+            autoFulfillPackageItems(selectedPackage, true); // Silent sync
+        }
+    }, [startDate, endDate, eventDate, selectedPackage]);
+
     const handlePreFinish = () => {
         const timestamp = new Date().toISOString().split('T')[0].replace(/-/g, '');
         const random = Math.floor(1000 + Math.random() * 9000);
+
         const contract: Contract = {
             id: `CN-${timestamp}-${random}`,
             contractType,
             clientId,
             clientName: selectedClient?.name || newClientDetails.name,
-            items: selectedItemIds.filter(id => !saleItemIds.includes(id)),
+            items: [
+                ...selectedItemIds.filter(id => !saleItemIds.includes(id)),
+                ...(selectedPackage ? Object.values(packageSlots) : [])
+            ],
             saleItems: selectedItemIds.filter(id => saleItemIds.includes(id)),
             startDate: contractType === 'Venda' ? eventDate : startDate,
             startTime,
@@ -433,7 +543,15 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                 contact,
                 guestRole,
                 isFirstRental
-            })
+            }),
+            ...(selectedPackage ? {
+                packageId: selectedPackage._id as any,
+                packageName: selectedPackage.name,
+                packageDetails: {
+                    original_price: selectedPackage.price,
+                    slots: packageSlots
+                }
+            } : {})
         };
         setPendingContract(contract);
         setShowReminder(true);
@@ -459,7 +577,7 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm p-0 md:p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm p-0 md:p-4 animate-in fade-in duration-200" >
             <div className="bg-white w-full h-full md:h-auto md:w-full md:max-w-5xl md:max-h-[90vh] md:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300 rounded-none">
                 {/* Header */}
                 <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
@@ -661,7 +779,7 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                                                         <p className="text-[11px] text-gray-400 mb-4">Nenhum cadastro corresponde à sua busca.</p>
                                                         <button
                                                             onClick={handleCreateNewClick}
-                                                            className="w-full py-3 bg-primary text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:bg-blue-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                                            className="w-full py-3 bg-navy text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-navy/20 hover:scale-[1.05] transition-all active:scale-95 flex items-center justify-center gap-2"
                                                         >
                                                             <span className="material-symbols-outlined text-sm">add_circle</span>
                                                             Cadastrar Novo Cliente
@@ -938,6 +1056,151 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                                 </div>
                             )}
 
+                            {/* SLOT SELECTION VIEW */}
+                            {viewMode === 'slot_selection' && (
+                                <div className="flex flex-col h-full animate-in slide-in-from-right-8 duration-300">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <button
+                                            onClick={() => {
+                                                setViewMode('packages');
+                                                setCatFilter('Todos');
+                                            }}
+                                            className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-navy transition-colors"
+                                        >
+                                            <span className="material-symbols-outlined">arrow_back</span>
+                                        </button>
+                                        <div>
+                                            <h3 className="font-bold text-navy text-lg">Selecione: {catFilter}</h3>
+                                            <p className="text-xs text-gray-400">Escolha o item para compor o pacote</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Toolbar (Duplicate from Items View) */}
+                                    <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-3 rounded-xl border border-gray-200 shadow-sm mb-4">
+                                        <div className="flex bg-gray-100 p-1 rounded-lg w-full md:w-auto overflow-x-auto">
+                                            {availableCategories.map(cat => (
+                                                <button
+                                                    key={cat}
+                                                    onClick={() => setCatFilter(cat)}
+                                                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${catFilter === cat ? 'bg-white shadow text-navy' : 'text-gray-500 hover:text-navy'}`}
+                                                >
+                                                    {cat}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className="relative w-full md:w-64">
+                                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">search</span>
+                                            <input
+                                                type="text"
+                                                placeholder="Buscar item..."
+                                                value={searchTerm}
+                                                onChange={e => setSearchTerm(e.target.value)}
+                                                className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-20 overflow-y-auto">
+                                        {productGroups.map((group) => {
+                                            const totalAvail = group.availableQty;
+                                            const isOutOfStock = totalAvail === 0;
+
+                                            return (
+                                                <div
+                                                    key={group.key}
+                                                    onClick={() => {
+                                                        if (isOutOfStock) return;
+
+                                                        const usedItemIds = Object.values(packageSlots);
+                                                        const availableItem = group.allItems.find(i =>
+                                                            !usedItemIds.includes(i.id)
+                                                        );
+
+                                                        if (availableItem && activeSlotIndex !== null) {
+                                                            setPackageSlots(prev => ({
+                                                                ...prev,
+                                                                [activeSlotIndex]: availableItem.id
+                                                            }));
+                                                            setViewMode('packages');
+                                                            setCatFilter('Todos');
+                                                        } else {
+                                                            showToast('error', 'Item indisponível ou já selecionado.');
+                                                        }
+                                                    }}
+                                                    className={`relative aspect-[3/4] rounded-2xl overflow-hidden cursor-pointer group transition-all duration-300
+                                                        ${isOutOfStock ? 'grayscale opacity-60 cursor-not-allowed' : 'hover:scale-[1.02] shadow-sm hover:shadow-xl'}
+                                                    `}
+                                                    style={{ backgroundImage: `url('${group.img || ''}')`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                                                >
+                                                    {/* Gradient Overlay */}
+                                                    <div className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent transition-opacity duration-300 ${isOutOfStock ? 'opacity-100' : 'opacity-80 group-hover:opacity-100'}`} />
+
+                                                    {/* Status & Badges */}
+                                                    <div className="absolute top-3 left-3 z-10">
+                                                        <span className="bg-white/20 backdrop-blur-md text-white border border-white/10 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                                                            {group.type}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="absolute top-3 right-3 z-10">
+                                                        <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-wider flex items-center gap-1 backdrop-blur-md border ${isOutOfStock
+                                                            ? 'bg-red-500/20 border-red-500/30 text-red-200'
+                                                            : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-200'
+                                                            }`}>
+                                                            <span className={`size-1.5 rounded-full ${isOutOfStock ? 'bg-red-500' : 'bg-emerald-400'}`}></span>
+                                                            {isOutOfStock ? 'Esgotado' : 'Disponível'}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Content */}
+                                                    <div className="absolute bottom-0 left-0 right-0 p-4 z-10 text-white">
+                                                        <div className="flex justify-between items-end mb-1">
+                                                            <span className="bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
+                                                                {group.size}
+                                                            </span>
+                                                            <span className="text-[9px] font-bold uppercase tracking-widest opacity-60">
+                                                                Total: {group.allItems.length}
+                                                            </span>
+                                                        </div>
+
+                                                        <h3 className="font-bold text-lg leading-tight mb-2 drop-shadow-sm line-clamp-2">
+                                                            {group.name}
+                                                        </h3>
+
+                                                        {/* Footer Stats */}
+                                                        <div className="flex justify-between items-center pt-2 border-t border-white/10">
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[9px] uppercase tracking-wider opacity-60 font-bold">Disponíveis</span>
+                                                                <span className={`text-sm font-black ${isOutOfStock ? 'text-red-300' : 'text-white'}`}>
+                                                                    {totalAvail} <span className="text-[9px] font-normal opacity-60">unid.</span>
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex flex-col text-right">
+                                                                <span className="text-[9px] uppercase tracking-wider opacity-60 font-bold">Alugados</span>
+                                                                <span className="text-sm font-black text-white/80">
+                                                                    {group.allItems.length - totalAvail} <span className="text-[9px] font-normal opacity-60">unid.</span>
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Hover Overlay Effect */}
+                                                    {!isOutOfStock && (
+                                                        <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                        {productGroups.length === 0 && (
+                                            <div className="col-span-full py-12 text-center text-gray-400">
+                                                <span className="material-symbols-outlined text-4xl block mb-2">search_off</span>
+                                                Nenhum item encontrado nesta categoria.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             {!startDate || !endDate ? (
                                 <div className="p-4 bg-blue-50 text-blue-700 rounded-xl text-sm flex gap-3 items-start border border-blue-100">
                                     <span className="material-symbols-outlined">info</span>
@@ -952,174 +1215,383 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                         </div>
                     )}
 
-                    {/* Step 2: Catalog */}
+                    {/* Step 2: Catalog or Packages */}
                     {step === 2 && (
                         <div className="flex flex-col h-full gap-4 animate-in slide-in-from-right-8 duration-300">
-                            {/* Toolbar */}
-                            <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
-                                <div className="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 custom-scrollbar">
-                                    {availableCategories.map(cat => (
-                                        <button key={cat} onClick={() => setCatFilter(cat)}
-                                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${catFilter === cat ? 'bg-navy text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                                            {cat}
-                                        </button>
-                                    ))}
-                                </div>
-                                <div className="relative w-full md:w-64">
-                                    <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-400">search</span>
-                                    <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} type="text" placeholder="Buscar peça..." className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 bg-gray-50 focus:ring-2 focus:ring-primary/20 outline-none text-sm" />
-                                </div>
-                                <div className="text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-100 px-3 py-2 rounded-lg">
-                                    {selectedItemIds.length} selecionados
+                            {/* Mode Toggle */}
+                            <div className="flex justify-center mb-2">
+                                <div className="bg-gray-100 p-1 rounded-xl flex gap-1">
+                                    <button
+                                        onClick={() => setViewMode('items')}
+                                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'items' ? 'bg-white shadow text-navy' : 'text-gray-500 hover:text-navy'}`}
+                                    >
+                                        Itens Avulsos
+                                    </button>
+                                    <button
+                                        onClick={() => setViewMode('packages')}
+                                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'packages' ? 'bg-white shadow text-navy' : 'text-gray-500 hover:text-navy'}`}
+                                    >
+                                        Pacotes & Combos
+                                    </button>
                                 </div>
                             </div>
 
-                            {/* Grid */}
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-20">
-                                {productGroups.map(group => {
-                                    const groupItemIds = group.allItems.map(i => i.id);
-                                    const selectedInGroup = selectedItemIds.filter(id => groupItemIds.includes(id)).length;
-                                    const totalAvail = group.availableQty;
-                                    const isOutOfStock = totalAvail <= 0;
+                            {/* ITEM VIEW */}
+                            {viewMode === 'items' && (
+                                <>
+                                    {/* Toolbar */}
+                                    <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                                        <div className="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 custom-scrollbar">
+                                            {availableCategories.map(cat => (
+                                                <button key={cat} onClick={() => setCatFilter(cat)}
+                                                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${catFilter === cat ? 'bg-navy text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                                                    {cat}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className="relative w-full md:w-64">
+                                            <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-400">search</span>
+                                            <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} type="text" placeholder="Buscar peça..." className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 bg-gray-50 focus:ring-2 focus:ring-primary/20 outline-none text-sm" />
+                                        </div>
+                                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-100 px-3 py-2 rounded-lg">
+                                            {selectedItemIds.length} selecionados
+                                        </div>
+                                    </div>
 
-                                    return (
-                                        <div key={group.key}
-                                            className={`group relative bg-white rounded-xl border overflow-hidden transition-all ${selectedInGroup > 0
-                                                ? 'ring-2 ring-primary border-primary shadow-lg scale-[1.02]'
-                                                : isOutOfStock
-                                                    ? 'opacity-60 grayscale border-gray-200'
-                                                    : 'border-gray-200 hover:border-primary/50 hover:shadow-md'
-                                                }`}
-                                        >
-                                            {/* Image Area */}
-                                            <div className="aspect-[3/4] bg-gray-100 bg-cover bg-center relative" style={{ backgroundImage: `url('${group.img}')` }}>
-                                                {isOutOfStock && (
-                                                    <div className="absolute inset-0 bg-white/60 flex items-center justify-center backdrop-blur-[1px]">
-                                                        <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded shadow-sm">Indisponível</span>
+                                    {/* Grid */}
+                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-20">
+                                        {productGroups.map(group => {
+                                            const groupItemIds = group.allItems.map(i => i.id);
+                                            const selectedInGroup = selectedItemIds.filter(id => groupItemIds.includes(id)).length;
+                                            const totalAvail = group.availableQty;
+                                            const isOutOfStock = totalAvail <= 0;
+
+                                            return (
+                                                <div key={group.key}
+                                                    className={`group relative bg-white rounded-xl border overflow-hidden transition-all ${selectedInGroup > 0
+                                                        ? 'ring-2 ring-primary border-primary shadow-lg scale-[1.02]'
+                                                        : isOutOfStock
+                                                            ? 'opacity-60 grayscale border-gray-200'
+                                                            : 'border-gray-200 hover:border-primary/50 hover:shadow-md'
+                                                        }`}
+                                                >
+                                                    {/* Image Area */}
+                                                    <div className="aspect-[3/4] bg-gray-100 bg-cover bg-center relative" style={{ backgroundImage: `url('${group.img}')` }}>
+                                                        {isOutOfStock && (
+                                                            <div className="absolute inset-0 bg-white/60 flex items-center justify-center backdrop-blur-[1px]">
+                                                                <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded shadow-sm">Indisponível</span>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Selection Overlay (Quantity Controls) */}
+                                                        <div className="absolute inset-0 bg-navy/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[2px]">
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); adjustQuantity(group, -1); }}
+                                                                disabled={selectedInGroup === 0}
+                                                                className="size-10 rounded-full bg-white text-navy flex items-center justify-center hover:bg-red-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
+                                                            >
+                                                                <span className="material-symbols-outlined">remove</span>
+                                                            </button>
+                                                            <span className="text-white font-black text-2xl drop-shadow-md">{selectedInGroup}</span>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); adjustQuantity(group, 1); }}
+                                                                disabled={selectedInGroup >= totalAvail}
+                                                                className="size-10 rounded-full bg-primary text-white flex items-center justify-center hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
+                                                            >
+                                                                <span className="material-symbols-outlined">add</span>
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Selected Badge */}
+                                                        {selectedInGroup > 0 && (
+                                                            <div className="absolute top-2 right-2 px-2 py-1 rounded-lg bg-primary text-white text-[10px] font-black shadow-md animate-in zoom-in">
+                                                                {selectedInGroup} SELECIONADO{selectedInGroup > 1 ? 'S' : ''}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                )}
 
-                                                {/* Selection Overlay (Quantity Controls) */}
-                                                <div className="absolute inset-0 bg-navy/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[2px]">
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); adjustQuantity(group, -1); }}
-                                                        disabled={selectedInGroup === 0}
-                                                        className="size-10 rounded-full bg-white text-navy flex items-center justify-center hover:bg-red-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
-                                                    >
-                                                        <span className="material-symbols-outlined">remove</span>
-                                                    </button>
-                                                    <span className="text-white font-black text-2xl drop-shadow-md">{selectedInGroup}</span>
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); adjustQuantity(group, 1); }}
-                                                        disabled={selectedInGroup >= totalAvail}
-                                                        className="size-10 rounded-full bg-primary text-white flex items-center justify-center hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
-                                                    >
-                                                        <span className="material-symbols-outlined">add</span>
-                                                    </button>
+                                                    {/* Info Area */}
+                                                    <div className="p-3">
+                                                        <h4 className="font-bold text-navy text-sm leading-tight line-clamp-2">{group.name}</h4>
+                                                        <div className="flex justify-between items-end mt-2">
+                                                            <div>
+                                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Tam {group.size}</p>
+                                                                <p className={`text-[11px] font-bold mt-0.5 ${totalAvail > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                                    {totalAvail} de {group.allItems.reduce((sum, i) => sum + (i.totalQuantity || 1), 0)} disponíveis
+                                                                </p>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <p className="text-xs font-black text-primary">
+                                                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                                                                        (contractType === 'Venda' ? (group.allItems[0].salePrice || group.price) : group.price) || 0
+                                                                    )}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Simple click-to-add for touch-friendly or quick action */}
+                                                    {selectedInGroup === 0 && !isOutOfStock && (
+                                                        <div
+                                                            onClick={() => adjustQuantity(group, 1)}
+                                                            className="absolute inset-0 z-0 cursor-pointer"
+                                                        />
+                                                    )}
                                                 </div>
+                                            );
+                                        })}
+                                    </div>
+                                </>
+                            )}
 
-                                                {/* Selected Badge */}
-                                                {selectedInGroup > 0 && (
-                                                    <div className="absolute top-2 right-2 px-2 py-1 rounded-lg bg-primary text-white text-[10px] font-black shadow-md animate-in zoom-in">
-                                                        {selectedInGroup} SELECIONADO{selectedInGroup > 1 ? 'S' : ''}
-                                                    </div>
-                                                )}
-                                            </div>
+                            {/* PACKAGE VIEW */}
+                            {viewMode === 'packages' && (
+                                <div className="h-full overflow-y-auto pb-20">
+                                    {!selectedPackage ? (
+                                        <div className="flex flex-col gap-4">
+                                            {packages.map(pkg => (
+                                                <div key={pkg._id} className="bg-white rounded-3xl border border-gray-100 p-6 hover:shadow-xl hover:shadow-navy/5 transition-all cursor-pointer group flex flex-col md:flex-row md:items-center gap-6 md:gap-8 relative overflow-hidden" onClick={() => {
+                                                    if (autoFulfillPackageItems(pkg)) {
+                                                        setSelectedPackage(pkg);
+                                                    }
+                                                }}>
+                                                    {/* Accent Bar */}
+                                                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#D4AF37] opacity-60 transition-all group-hover:w-2"></div>
 
-                                            {/* Info Area */}
-                                            <div className="p-3">
-                                                <h4 className="font-bold text-navy text-sm leading-tight line-clamp-2">{group.name}</h4>
-                                                <div className="flex justify-between items-end mt-2">
-                                                    <div>
-                                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Tam {group.size}</p>
-                                                        <p className={`text-[11px] font-bold mt-0.5 ${totalAvail > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                                            {totalAvail} de {group.allItems.reduce((sum, i) => sum + (i.totalQuantity || 1), 0)} disponíveis
+                                                    {/* Left: Name and Price */}
+                                                    <div className="flex-1 w-full md:min-w-[200px]">
+                                                        <h3 className="text-lg font-black text-navy leading-none mb-2 group-hover:text-primary transition-colors">{pkg.name}</h3>
+                                                        <p className="text-2xl font-black text-[#D4AF37] tracking-tight">
+                                                            <span className="text-xs font-bold mr-1 opacity-60">R$</span>
+                                                            {pkg.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                         </p>
                                                     </div>
-                                                    <div className="text-right">
-                                                        <p className="text-xs font-black text-primary">
-                                                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                                                                (contractType === 'Venda' ? (group.allItems[0].salePrice || group.price) : group.price) || 0
-                                                            )}
-                                                        </p>
+
+                                                    {/* Middle: Composition */}
+                                                    <div className="flex-[2] w-full bg-gray-50/50 rounded-2xl p-4 border border-gray-100/50 flex flex-wrap gap-2 items-start md:items-center">
+                                                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] w-full mb-1">Itens Inclusos</span>
+                                                        {pkg.items_config.map((cfg, idx) => (
+                                                            <div key={idx} className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-gray-200 shadow-sm">
+                                                                <span className="text-[10px] font-bold text-navy/70 uppercase tracking-tight">{cfg.category}</span>
+                                                                <span className="text-[10px] font-black text-gray-300">x{cfg.quantity}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    {/* Right: CTA */}
+                                                    <div className="w-full md:w-auto flex justify-end shrink-0 pt-2 md:pt-0">
+                                                        <div className="size-12 rounded-2xl bg-navy text-white flex items-center justify-center transition-all group-hover:bg-primary group-active:scale-95 shadow-lg shadow-navy/10 group-hover:shadow-primary/20">
+                                                            <span className="material-symbols-outlined">add_circle</span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-
-                                            {/* Simple click-to-add for touch-friendly or quick action */}
-                                            {selectedInGroup === 0 && !isOutOfStock && (
-                                                <div
-                                                    onClick={() => adjustQuantity(group, 1)}
-                                                    className="absolute inset-0 z-0 cursor-pointer"
-                                                />
+                                            ))}
+                                            {packages.length === 0 && (
+                                                <div className="col-span-full text-center py-12 text-gray-400">
+                                                    <span className="material-symbols-outlined text-4xl block mb-2">inventory_2</span>
+                                                    Nenhum pacote disponível.
+                                                </div>
                                             )}
                                         </div>
-                                    );
-                                })}
-                            </div>
+                                    ) : (
+                                        <div className="space-y-6">
+                                            <div className="bg-navy text-white p-6 rounded-2xl shadow-lg relative overflow-hidden">
+                                                <div className="relative z-10 flex justify-between items-center">
+                                                    <div>
+                                                        <p className="text-white/60 text-xs font-bold uppercase tracking-widest mb-1">Pacote Selecionado</p>
+                                                        <h2 className="text-2xl font-black">{selectedPackage.name}</h2>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-3xl font-black text-gold">R$ {selectedPackage.price.toFixed(2)}</p>
+                                                        <button onClick={() => setSelectedPackage(null)} className="text-xs text-white/80 hover:text-white underline mt-1">Alterar Pacote</button>
+                                                    </div>
+                                                </div>
+                                                <div className="absolute -right-10 -bottom-10 opacity-10">
+                                                    <span className="material-symbols-outlined text-[150px]">inventory_2</span>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <h3 className="font-bold text-navy mb-4 flex items-center gap-2">
+                                                    <span className="material-symbols-outlined text-primary">checkroom</span>
+                                                    Itens do Pacote
+                                                </h3>
+                                                <div className="space-y-3">
+                                                    {selectedPackage.items_config.flatMap((cfg, cfgIdx) => {
+                                                        return Array.from({ length: cfg.quantity }).map((_, qtyIdx) => {
+                                                            const globalSlotIndex = selectedPackage.items_config
+                                                                .slice(0, cfgIdx)
+                                                                .reduce((sum, c) => sum + c.quantity, 0) + qtyIdx;
+
+                                                            const selectedItemId = packageSlots[globalSlotIndex];
+                                                            const selectedItem = selectedItemId ? items.find(i => i.id === selectedItemId) : null;
+
+                                                            return (
+                                                                <div key={`${cfgIdx}-${qtyIdx}`} className="bg-white border border-gray-200 rounded-xl p-4">
+                                                                    <div className="flex justify-between items-center mb-2">
+                                                                        <h4 className="font-bold text-gray-700">{cfg.category} <span className="text-gray-400 text-xs">#{qtyIdx + 1}</span></h4>
+                                                                        {selectedItem ? (
+                                                                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold flex items-center gap-1">
+                                                                                <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                                                                                Selecionado
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-500 font-bold">Pendente</span>
+                                                                        )}
+                                                                    </div>
+
+                                                                    {selectedItem ? (
+                                                                        <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-lg border border-gray-200 relative group">
+                                                                            <div className="size-10 bg-white rounded-md bg-cover bg-center border border-gray-200" style={{ backgroundImage: `url('${selectedItem.img || ''}')` }} />
+                                                                            <div className="flex-1 min-w-0">
+                                                                                <p className="font-bold text-navy text-sm truncate">{selectedItem.name}</p>
+                                                                                <p className="text-xs text-gray-500">Tam: {selectedItem.size}</p>
+                                                                            </div>
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    const next = { ...packageSlots };
+                                                                                    delete next[globalSlotIndex];
+                                                                                    setPackageSlots(next);
+                                                                                }}
+                                                                                className="size-8 flex items-center justify-center text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                                            >
+                                                                                <span className="material-symbols-outlined">delete</span>
+                                                                            </button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div
+                                                                            onClick={() => {
+                                                                                setActiveSlotIndex(globalSlotIndex);
+                                                                                setCatFilter('Todos'); // Default to All as requested, or reset
+                                                                                setViewMode('slot_selection');
+                                                                            }}
+                                                                            className="p-3 bg-gray-50 rounded-lg text-center border border-dashed border-gray-300 text-sm text-gray-400 cursor-pointer hover:bg-gray-100 hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-2"
+                                                                        >
+                                                                            <span className="material-symbols-outlined">add_circle</span>
+                                                                            Selecionar {cfg.category}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        });
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
 
-                    {/* Step 3: Review */}
                     {step === 3 && (
                         <div className="flex flex-col lg:flex-row gap-8 animate-in slide-in-from-right-8 duration-300">
-                            <div className="flex-1 space-y-4">
-                                <h3 className="font-bold text-navy text-lg flex items-center gap-2"><span className="material-symbols-outlined">shopping_bag</span> Itens Selecionados</h3>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                    {cartItems.map(item => (
-                                        <div key={item.id} className="group relative bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md transition-all">
-                                            <div className="aspect-square bg-gray-100 bg-cover bg-center" style={{ backgroundImage: `url('${item.img}')` }}>
-                                                {item.quantity > 1 && (
-                                                    <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-navy text-white text-[10px] font-black z-10">
-                                                        {item.quantity}x
-                                                    </div>
-                                                )}
-                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                    <button
-                                                        onClick={() => {
-                                                            const index = selectedItemIds.indexOf(item.id);
-                                                            if (index > -1) {
-                                                                setSelectedItemIds(prev => {
-                                                                    const next = [...prev];
-                                                                    next.splice(index, 1);
-                                                                    return next;
-                                                                });
-                                                            }
-                                                        }}
-                                                        className="bg-red-500 text-white p-2 rounded-full shadow-lg hover:scale-110 transition-transform"
-                                                    >
-                                                        <span className="material-symbols-outlined text-sm">remove</span>
-                                                    </button>
-                                                </div>
+                            <div className="flex-1 space-y-6">
+                                {selectedPackage && (
+                                    <div className="space-y-4">
+                                        <h3 className="font-bold text-navy text-lg flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-primary">inventory_2</span>
+                                            Pacote Selecionado
+                                        </h3>
+                                        <div className="bg-navy text-white p-5 rounded-2xl shadow-lg relative overflow-hidden flex justify-between items-center">
+                                            <div className="relative z-10">
+                                                <h4 className="font-black text-xl">{selectedPackage.name}</h4>
+                                                <p className="text-xs text-white/60 font-medium">Itens de pacote inclusos</p>
                                             </div>
-                                            <div className="p-3">
-                                                <h4 className="font-bold text-navy text-xs truncate">{item.name}</h4>
-                                                <div className="flex flex-col gap-2 mt-2">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="px-1.5 py-0.5 bg-gray-100 rounded text-[9px] font-bold text-gray-500 uppercase">{item.size}</span>
-                                                        <button
-                                                            onClick={() => toggleSaleItem(item.id)}
-                                                            className={`px-2 py-1 rounded text-[9px] font-black uppercase transition-all border ${saleItemIds.includes(item.id)
-                                                                ? 'bg-gold text-navy border-gold shadow-sm'
-                                                                : 'bg-blue-50 text-primary border-blue-100'}`}
-                                                        >
-                                                            {saleItemIds.includes(item.id) ? 'Venda' : 'Aluguel'}
-                                                        </button>
-                                                    </div>
-                                                    <div className="flex justify-between items-center bg-gray-50 p-1.5 rounded-lg border border-gray-100">
-                                                        <span className="text-[10px] font-bold text-gray-400">Total</span>
-                                                        <span className="font-black text-navy text-xs">
-                                                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                                                                (saleItemIds.includes(item.id) ? (item.salePrice || item.price || 0) : (item.price || 0)) * item.quantity
-                                                            )}
-                                                        </span>
-                                                    </div>
-                                                </div>
+                                            <div className="relative z-10 text-right">
+                                                <p className="text-2xl font-black text-gold">R$ {selectedPackage.price.toFixed(2)}</p>
+                                            </div>
+                                            <div className="absolute -right-6 -bottom-6 opacity-10">
+                                                <span className="material-symbols-outlined text-8xl">inventory_2</span>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
 
+                                        {/* Package Items Mini List */}
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                            {Object.values(packageSlots).map(itemId => {
+                                                const item = items.find(i => i.id === itemId);
+                                                if (!item) return null;
+                                                return (
+                                                    <div key={itemId} className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                                                        <div className="size-8 rounded bg-white shadow-sm bg-cover bg-center border border-gray-200" style={{ backgroundImage: `url('${item.img}')` }} />
+                                                        <div className="min-w-0">
+                                                            <p className="text-[10px] font-bold text-navy truncate">{item.name}</p>
+                                                            <p className="text-[8px] text-gray-400 font-black uppercase">Tam {item.size}</p>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="space-y-4">
+                                    <h3 className="font-bold text-navy text-lg flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-primary">shopping_bag</span>
+                                        {selectedPackage ? 'Itens Adicionais (Avulsos)' : 'Itens Selecionados'}
+                                    </h3>
+
+                                    {cartItems.length === 0 && selectedPackage ? (
+                                        <div className="p-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200 text-gray-400">
+                                            <p className="text-sm font-medium">Nenhum item adicional selecionado.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                            {cartItems.map(item => (
+                                                <div key={item.id} className="group relative bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md transition-all">
+                                                    <div className="aspect-square bg-gray-100 bg-cover bg-center" style={{ backgroundImage: `url('${item.img}')` }}>
+                                                        {item.quantity > 1 && (
+                                                            <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-navy text-white text-[10px] font-black z-10">
+                                                                {item.quantity}x
+                                                            </div>
+                                                        )}
+                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                            <button
+                                                                onClick={() => {
+                                                                    const index = selectedItemIds.indexOf(item.id);
+                                                                    if (index > -1) {
+                                                                        setSelectedItemIds(prev => {
+                                                                            const next = [...prev];
+                                                                            next.splice(index, 1);
+                                                                            return next;
+                                                                        });
+                                                                    }
+                                                                }}
+                                                                className="bg-red-500 text-white p-2 rounded-full shadow-lg hover:scale-110 transition-transform"
+                                                            >
+                                                                <span className="material-symbols-outlined text-sm">remove</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="p-3">
+                                                        <h4 className="font-bold text-navy text-xs truncate">{item.name}</h4>
+                                                        <div className="flex flex-col gap-2 mt-2">
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="px-1.5 py-0.5 bg-gray-100 rounded text-[9px] font-bold text-gray-500 uppercase">{item.size}</span>
+                                                                <button
+                                                                    onClick={() => toggleSaleItem(item.id)}
+                                                                    className={`px-2 py-1 rounded text-[9px] font-black uppercase transition-all border ${saleItemIds.includes(item.id)
+                                                                        ? 'bg-gold text-navy border-gold shadow-sm'
+                                                                        : 'bg-blue-50 text-primary border-blue-100'}`}
+                                                                >
+                                                                    {saleItemIds.includes(item.id) ? 'Venda' : 'Aluguel'}
+                                                                </button>
+                                                            </div>
+                                                            <div className="flex justify-between items-center bg-gray-50 p-1.5 rounded-lg border border-gray-100">
+                                                                <span className="text-[10px] font-bold text-gray-400">Total</span>
+                                                                <span className="font-black text-navy text-xs">
+                                                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                                                                        (saleItemIds.includes(item.id) ? (item.salePrice || item.price || 0) : (item.price || 0)) * item.quantity
+                                                                    )}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                                 {/* Fitting and Technical Details */}
                                 {contractType === 'Aluguel' && (
                                     <div className="space-y-6">
@@ -1229,10 +1701,24 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                                     </h3>
 
                                     <div className="space-y-3 text-sm">
-                                        <div className="flex justify-between text-gray-600">
-                                            <span>Subtotal ({cartItems.length} itens)</span>
-                                            <span className="font-medium text-navy">R$ {subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                                        </div>
+                                        {selectedPackage && (
+                                            <div className="flex justify-between text-navy font-bold">
+                                                <span>Subtotal Pacote</span>
+                                                <span>R$ {selectedPackage.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                            </div>
+                                        )}
+                                        {cartItems.length > 0 && (
+                                            <div className="flex justify-between text-gray-600">
+                                                <span>Itens Avulsos ({cartItems.length})</span>
+                                                <span className="font-medium text-navy">
+                                                    R$ {selectedItemIds.reduce((acc, id) => {
+                                                        const item = items.find(i => i.id === id);
+                                                        const isSale = saleItemIds.includes(id);
+                                                        return acc + (isSale ? (item?.salePrice || item?.price || 0) : (item?.price || 0));
+                                                    }, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </span>
+                                            </div>
+                                        )}
                                         <div className="flex justify-between items-center text-gray-600">
                                             <span>Desconto</span>
                                             <div className="flex items-center gap-1 w-24">
@@ -1279,7 +1765,7 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                                                 <div>
                                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Forma de Pagamento</label>
                                                     <div className="grid grid-cols-2 gap-2">
-                                                        {['Pix', 'Dinheiro', 'Cartão', 'Link'].map(method => (
+                                                        {['Pix', 'Dinheiro', 'Crédito', 'Débito', 'Link'].map(method => (
                                                             <button
                                                                 key={method}
                                                                 onClick={() => setPaymentMethod(method)}
@@ -1289,7 +1775,8 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                                                             >
                                                                 {method === 'Pix' && <span className="material-symbols-outlined text-[16px]">qr_code_2</span>}
                                                                 {method === 'Dinheiro' && <span className="material-symbols-outlined text-[16px]">payments</span>}
-                                                                {method === 'Cartão' && <span className="material-symbols-outlined text-[16px]">credit_card</span>}
+                                                                {method === 'Crédito' && <span className="material-symbols-outlined text-[16px]">credit_card</span>}
+                                                                {method === 'Débito' && <span className="material-symbols-outlined text-[16px]">credit_score</span>}
                                                                 {method === 'Link' && <span className="material-symbols-outlined text-[16px]">link</span>}
                                                                 {method}
                                                             </button>
@@ -1302,7 +1789,7 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                                                 <div>
                                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Forma de Pagamento (Venda Total)</label>
                                                     <div className="grid grid-cols-2 gap-2">
-                                                        {['Pix', 'Dinheiro', 'Cartão', 'Link'].map(method => (
+                                                        {['Pix', 'Dinheiro', 'Crédito', 'Débito', 'Link'].map(method => (
                                                             <button
                                                                 key={method}
                                                                 onClick={() => {
@@ -1315,7 +1802,8 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                                                             >
                                                                 {method === 'Pix' && <span className="material-symbols-outlined text-[16px]">qr_code_2</span>}
                                                                 {method === 'Dinheiro' && <span className="material-symbols-outlined text-[16px]">payments</span>}
-                                                                {method === 'Cartão' && <span className="material-symbols-outlined text-[16px]">credit_card</span>}
+                                                                {method === 'Crédito' && <span className="material-symbols-outlined text-[16px]">credit_card</span>}
+                                                                {method === 'Débito' && <span className="material-symbols-outlined text-[16px]">credit_score</span>}
                                                                 {method === 'Link' && <span className="material-symbols-outlined text-[16px]">link</span>}
                                                                 {method}
                                                             </button>
@@ -1378,7 +1866,7 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                                     ? (!newClientDetails.name || !newClientDetails.phone)
                                     : (contractType === 'Aluguel' ? (!startDate || !endDate || !clientId) : (!eventDate || !clientId))
                             )) ||
-                            (step === 2 && selectedItemIds.length === 0) ||
+                            (step === 2 && selectedItemIds.length === 0 && !selectedPackage) ||
                             (step === 3 && !isClientValid)
                         }
                         className={`px-8 py-3 rounded-xl font-bold shadow-lg shadow-blue-500/25 transition-all flex items-center gap-2 

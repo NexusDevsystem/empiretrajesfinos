@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
+import Packages from './components/Packages';
 import { IMAGES } from './constants';
 import { useApp } from './contexts/AppContext';
+import { ToastProvider } from './contexts/ToastContext';
+import { AppProvider } from './contexts/AppContext';
+import { PackageProvider } from './contexts/PackageContext';
 import LoginScreen from './components/LoginScreen';
 import NewContractModal from './components/NewContractModal';
 import Dashboard from './components/Dashboard';
@@ -20,7 +24,7 @@ import SystemHistory from './components/SystemHistory';
 import Payables from './components/Payables';
 import Receipts from './components/Receipts';
 
-export default function App() {
+function AppContent() {
   const { showWizard, openWizard, closeWizard, currentView, navigateTo, user, isLoading, profile, signOut } = useApp();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -47,6 +51,7 @@ export default function App() {
     switch (currentView) {
       case 'dashboard': return <Dashboard />;
       case 'inventory': return <Inventory />;
+      case 'packages': return <Packages />;
       case 'agenda': return <Agenda />;
       case 'logistics': return <Logistics />;
       case 'contracts': return <Contracts />;
@@ -84,6 +89,7 @@ export default function App() {
       items: [
         { id: 'logistics', icon: 'local_laundry_service', label: 'Logística' },
         { id: 'inventory', icon: 'checkroom', label: 'Vestuário' },
+        { id: 'packages', icon: 'inventory_2', label: 'Pacotes / Combos' },
       ]
     },
     {
@@ -126,15 +132,15 @@ export default function App() {
         <div className={`flex items-start ${isSidebarCollapsed ? 'justify-center p-0' : 'justify-center p-0'} relative group border-b border-gray-50 overflow-hidden ${isSidebarCollapsed ? 'h-14' : 'h-36'}`}>
           {!isSidebarCollapsed && (
             IMAGES.logo ? (
-              <img src={IMAGES.logo} alt="Logo" className="w-full h-auto -mt-16" />
+              <img src={IMAGES.logo} alt="Logo" className="w-full h-auto -mt-10" />
             ) : (
-              <div className="flex items-center gap-3">
-                <div className="size-8 rounded bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
+              <div className="flex items-center gap-3 mt-6">
+                <div className="size-8 rounded bg-navy flex items-center justify-center shrink-0 shadow-lg shadow-navy/20">
                   <span className="material-symbols-outlined text-white text-[20px]">diamond</span>
                 </div>
                 <div className="flex flex-col">
                   <h1 className="text-navy font-black tracking-tight leading-none text-lg">Empire</h1>
-                  <p className="text-gold text-[10px] font-bold uppercase tracking-widest">Trajes Finos</p>
+                  <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Trajes Finos</p>
                 </div>
               </div>
             )
@@ -152,7 +158,7 @@ export default function App() {
         <button
           onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           className={`
-            hidden md:flex absolute -right-[14px] ${isSidebarCollapsed ? 'top-10' : 'top-32'} -translate-y-1/2 size-7 bg-white border border-gray-200 rounded-lg items-center justify-center text-gray-400 hover:text-primary hover:border-primary transition-all z-50 shadow-md
+            hidden md:flex absolute -right-[14px] ${isSidebarCollapsed ? 'top-10' : 'top-32'} -translate-y-1/2 size-7 bg-white border border-gray-200 rounded-lg items-center justify-center text-gray-400 hover:text-navy hover:border-navy transition-all z-50 shadow-md
           `}
         >
           <span className="material-symbols-outlined text-[18px]">side_navigation</span>
@@ -170,7 +176,7 @@ export default function App() {
         <div className={`${isSidebarCollapsed ? 'px-4' : 'px-6'} mb-6 ${isSidebarCollapsed ? 'mt-4' : 'mt-10'} transition-all`}>
           <button
             onClick={() => { openWizard(); setIsMobileMenuOpen(false); }}
-            className={`w-full flex items-center justify-center gap-2 bg-primary text-white ${isSidebarCollapsed ? 'h-12 w-12 rounded-full mx-auto' : 'h-11 rounded-xl'} font-bold hover:bg-primary/90 shadow-lg shadow-primary/30 transition-all active:scale-95 group overflow-hidden`}
+            className={`w-full flex items-center justify-center gap-2 bg-navy text-white ${isSidebarCollapsed ? 'h-12 w-12 rounded-full mx-auto' : 'h-11 rounded-xl'} font-bold hover:bg-navy/90 shadow-lg shadow-navy/30 transition-all active:scale-95 group overflow-hidden`}
           >
             <span className="material-symbols-outlined group-hover:rotate-90 transition-transform duration-300">add</span>
             {!isSidebarCollapsed && <span className="whitespace-nowrap">Nova Reserva</span>}
@@ -290,5 +296,17 @@ export default function App() {
       {/* Global Wizard Modal */}
       {showWizard && <NewContractModal isOpen={showWizard} onClose={closeWizard} />}
     </div >
+  );
+}
+
+export default function App() {
+  return (
+    <ToastProvider>
+      <AppProvider>
+        <PackageProvider>
+          <AppContent />
+        </PackageProvider>
+      </AppProvider>
+    </ToastProvider>
   );
 }

@@ -157,6 +157,7 @@ export default function PrintableContract({ contract, client, items, onClose }: 
                 <div className="flex justify-between items-center mb-3 pb-1 border-b-2 border-navy">
                     <h2 className="text-xl font-serif italic text-navy">
                         Contrato de {contract.contractType || 'Locação'} #{contract.number || contract.id.split('-').pop()?.toUpperCase()}
+                        {contract.packageName && <span className="block text-xs font-sans not-italic font-black text-navy/40 uppercase tracking-widest mt-1">Pacote: {contract.packageName}</span>}
                     </h2>
                     <div className="text-right">
                         <p className="text-[10px] font-sans font-black uppercase tracking-[0.2em] text-black">Data: {new Date().toLocaleDateString('pt-BR')}</p>
@@ -440,6 +441,7 @@ export default function PrintableContract({ contract, client, items, onClose }: 
                         <thead>
                             <tr className="border-b border-navy">
                                 <th className="py-3 font-black uppercase text-[10px] tracking-widest text-black">Descrição do Item</th>
+                                <th className="py-3 font-black uppercase text-[10px] tracking-widest text-navy/40 text-center">Tipo</th>
                                 <th className="py-3 font-black uppercase text-[10px] tracking-widest text-navy/40 text-center">Tamanho</th>
                                 <th className="py-3 font-black uppercase text-[10px] tracking-widest text-navy/40 text-right">Valor</th>
                             </tr>
@@ -448,6 +450,7 @@ export default function PrintableContract({ contract, client, items, onClose }: 
                             {items.map((item, i) => (
                                 <tr key={i}>
                                     <td className="py-1 font-bold text-navy uppercase">{item.name}</td>
+                                    <td className="py-1 text-center text-[10px] font-black uppercase text-gray-400">{item.type}</td>
                                     <td className="py-1 font-bold text-navy text-center text-sm">{item.size}</td>
                                     <td className="py-1 text-right font-black">
                                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
@@ -470,7 +473,7 @@ export default function PrintableContract({ contract, client, items, onClose }: 
                                         {/* Adiantamento / Pago */}
                                         <div className="flex items-baseline gap-2 opacity-60">
                                             <span className="text-[8px] font-bold uppercase tracking-widest text-black">
-                                                {contract.contractType === 'Venda' ? 'Valor Pago:' : `Reserva (${contract.paymentMethod || 'PIX'}):`}
+                                                {contract.contractType === 'Venda' ? 'Valor Pago:' : `Reserva (${contract.paymentMethod || 'Pix'}):`}
                                             </span>
                                             <span className="text-[12px] font-black italic">
                                                 -{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(contract.paidAmount || 0)}

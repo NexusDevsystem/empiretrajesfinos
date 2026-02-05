@@ -131,7 +131,7 @@ export default function Clients() {
                 </div>
                 <button
                     onClick={() => setIsModalOpen(true)}
-                    className="w-full md:w-auto flex items-center justify-center gap-2 rounded-xl h-12 px-8 bg-primary text-white text-xs md:text-sm font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-blue-700 transition-all active:scale-95"
+                    className="w-full md:w-auto flex items-center justify-center gap-2 rounded-xl h-12 px-8 bg-navy text-white text-xs md:text-sm font-black uppercase tracking-widest shadow-lg shadow-navy/20 hover:scale-[1.02] transition-all active:scale-95"
                 >
                     <span className="material-symbols-outlined text-lg">person_add</span>
                     <span>Novo Cliente</span>

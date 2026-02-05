@@ -547,7 +547,7 @@ export default function StockDetailsModal({ isOpen, onClose, representativeItem 
                                 >
                                     <span className="material-symbols-outlined text-[20px]">{isSelectionMode ? 'close' : 'checklist'}</span>
                                 </button>
-                                <button onClick={handleAddUnit} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-xs md:text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95 whitespace-nowrap">
+                                <button onClick={handleAddUnit} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-navy text-white rounded-xl text-xs md:text-sm font-bold hover:scale-[1.02] transition-all shadow-lg shadow-navy/20 active:scale-95 whitespace-nowrap">
                                     <span className="material-symbols-outlined text-lg md:text-xl">add_circle</span>
                                     <span>Adicionar Unidade</span>
                                 </button>
@@ -996,7 +996,7 @@ export default function StockDetailsModal({ isOpen, onClose, representativeItem 
                                 </button>
                                 <button
                                     onClick={handleSaveProductEdit}
-                                    className="px-10 py-3 bg-primary text-white rounded-xl font-black shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all uppercase text-xs tracking-widest flex items-center gap-2"
+                                    className="px-10 py-3 bg-navy text-white rounded-xl font-black shadow-lg shadow-navy/20 hover:scale-[1.02] transition-all uppercase text-xs tracking-widest flex items-center gap-2"
                                 >
                                     <span className="material-symbols-outlined text-[18px]">save</span>
                                     Atualizar Todas as Unidades

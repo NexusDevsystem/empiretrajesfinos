@@ -102,13 +102,17 @@ export interface Contract {
         eventLocation: string; // LOCAL DO EVENTO
     };
     packageDetails?: {
-        reception: boolean; // (1) Traje Recepção
-        waltz: boolean; // (2) Traje Valsa
-        party: boolean; // (3) Traje Balada
-        accessories: boolean; // (4) Acessórios
-        family: boolean; // (5) Traje Família
-        firstRental: boolean; // Confecção Primeiro Aluguel
+        reception?: boolean; // (1) Traje Recepção
+        waltz?: boolean; // (2) Traje Valsa
+        party?: boolean; // (3) Traje Balada
+        accessories?: boolean; // (4) Acessórios
+        family?: boolean; // (5) Traje Família
+        firstRental?: boolean; // Confecção Primeiro Aluguel
+        original_price?: number;
+        slots?: any;
     };
+    packageId?: string;
+    packageName?: string;
 
     // Generic/Normal Specifics
     eventLocation?: string;

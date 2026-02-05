@@ -349,7 +349,7 @@ export default function NewItemModal({ isOpen, onClose, onSave }: NewItemModalPr
                         <button
                             onClick={handleSaveClick}
                             disabled={!newItem.name}
-                            className="px-8 py-2.5 rounded-xl bg-primary text-white font-bold shadow-lg shadow-blue-500/25 hover:bg-blue-700 hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center gap-2"
+                            className="px-8 py-2.5 rounded-xl bg-navy text-white font-bold shadow-lg shadow-navy/20 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center gap-2"
                         >
                             <span className="material-symbols-outlined">save</span>
                             Salvar {newItem.quantity && newItem.quantity > 1 ? `(${newItem.quantity})` : 'Item'}

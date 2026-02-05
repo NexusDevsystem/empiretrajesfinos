@@ -129,8 +129,6 @@ export default function Contracts() {
                             onClick={() => setSelectedContract(contract)}
                             className={`group relative bg-white rounded-3xl border border-gray-100/80 shadow-sm cursor-pointer transition-all duration-500 hover:shadow-lg hover:shadow-navy/5 overflow-hidden flex flex-col md:flex-row items-stretch min-h-[100px] ${selectedContract?.id === contract.id ? 'ring-2 ring-primary ring-offset-2' : ''}`}
                         >
-                            {/* Left Accent Bar */}
-                            <div className="w-1.5 md:w-2 shrink-0 transition-all duration-500 group-hover:w-3" style={{ backgroundColor: contractColor }}></div>
 
                             <div className="flex-1 p-4 md:p-6 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-8">
 

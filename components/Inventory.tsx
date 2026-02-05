@@ -91,7 +91,7 @@ export default function Inventory() {
                 {!isSeller && (
                     <button
                         onClick={() => setIsModalOpen(true)}
-                        className="w-full md:w-auto flex items-center justify-center gap-2 rounded-xl h-12 px-8 bg-gold text-navy text-xs md:text-sm font-black uppercase tracking-widest shadow-lg shadow-gold/20 hover:bg-gold/90 transition-all active:scale-95 shrink-0"
+                        className="w-full md:w-auto flex items-center justify-center gap-2 rounded-xl h-12 px-8 bg-navy text-white text-xs md:text-sm font-black uppercase tracking-widest shadow-lg shadow-navy/20 hover:scale-[1.02] transition-all active:scale-95 shrink-0"
                     >
                         <span className="material-symbols-outlined text-lg">add</span>
                         <span>Novo Item</span>

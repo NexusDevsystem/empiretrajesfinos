@@ -143,8 +143,8 @@ export default function PrintableReceipt({ receipt, onClose }: PrintableReceiptP
                     <div className="mb-8 border-t border-b border-gray-100 py-4">
                         <p className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-3">Pagamento realizado via</p>
                         <div className="flex gap-6 flex-wrap">
-                            {['Dinheiro', 'PIX', 'Cartão', 'Cheque', 'Transferência'].map((method) => {
-                                const isSelected = receipt.paymentMethod.toLowerCase().includes(method.toLowerCase()) ||
+                            {['Dinheiro', 'Pix', 'Crédito', 'Débito', 'Transferência'].map((method) => {
+                                const isSelected = receipt.paymentMethod.toLowerCase() === method.toLowerCase() ||
                                     (method === 'Transferência' && receipt.paymentMethod.toLowerCase().includes('transferencia'));
                                 return (
                                     <div key={method} className="flex items-center gap-2">
