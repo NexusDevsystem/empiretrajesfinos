@@ -40,21 +40,45 @@ export interface Client {
     zip?: string; // CEP
     birthDate?: string; // DNASC
 
+    profileType?: 'Comum' | 'Debutante';
     // Measurements
     measurements?: {
-        height?: string; // Altura
-        weight?: string; // Peso
-        shoeSize?: string; // Sapato
-        shirtSize?: string; // Camisa
-        pantsSize?: string; // Calça
-        jacketSize?: string; // Paletó
-        chest?: string; // Tórax
-        waist?: string; // Cintura
-        hips?: string; // Quadril
-        shoulder?: string; // Ombro
-        sleeve?: string; // Manga
-        inseam?: string; // Entrepernas
-        neck?: string; // Pescoço
+        // Comum
+        height?: string;
+        weight?: string;
+        shoeSize?: string;
+        shirtSize?: string;
+        pantsSize?: string;
+        jacketSize?: string;
+        chest?: string;
+        waist?: string;
+        hips?: string;
+        shoulder?: string;
+        sleeve?: string;
+        inseam?: string;
+        neck?: string;
+
+        // Novos campos solicitados
+        abBusto?: string; // AB. Busto / Abaix. Busto
+        altQuadril?: string;
+        manga?: string;
+        cava?: string;
+        frente?: string;
+        costa?: string;
+        comprBlusa?: string;
+        comprSaia?: string;
+        comprShort?: string;
+        comprManga?: string;
+        colarinho?: string;
+        largBraco?: string;
+        punho?: string;
+
+        // Mapeamento para nomes solicitados (alias ou campos extras)
+        terno?: string;
+        cm?: string;
+        calca?: string;
+        cc?: string;
+        busto?: string;
     };
 }
 

@@ -68,62 +68,61 @@ export default function AvailabilitySearch() {
     };
 
     return (
-        <div className="flex flex-col h-full lg:h-full bg-gray-50/50 lg:overflow-hidden">
+        <div className="flex flex-col h-full lg:h-full bg-white lg:overflow-hidden">
             {/* Header */}
-            <div className="p-6 bg-white border-b border-gray-200 shrink-0">
-                <div className="flex items-center gap-3">
-                    <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                        <span className="material-symbols-outlined">analytics</span>
+            <div className="p-8 bg-white border-b border-gray-100 shrink-0">
+                <div className="flex items-center gap-4">
+                    <div className="size-10 rounded-xl bg-gray-50 flex items-center justify-center text-navy border border-gray-100">
+                        <span className="material-symbols-outlined text-xl">manage_search</span>
                     </div>
                     <div>
-                        <h2 className="text-2xl font-black text-navy tracking-tight">Busca e Disponibilidade Inteligente</h2>
-                        <p className="text-sm text-gray-500 font-medium">Encontre o item perfeito livre para as datas do seu cliente.</p>
+                        <h2 className="text-xl font-black text-navy tracking-tight">Busca Inteligente</h2>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">Disponibilidade de Acervo</p>
                     </div>
                 </div>
             </div>
 
-            <div className="flex-1 flex flex-col lg:flex-row lg:overflow-hidden">
-                {/* Lateral Filters - Desktop / Top Filters - Mobile */}
-                <div className="w-full lg:w-80 bg-white border-b lg:border-r border-gray-100 lg:overflow-y-auto p-6 shrink-0 custom-scrollbar">
-                    <div className="space-y-8">
+            <div className="flex-1 flex flex-col lg:flex-row lg:overflow-hidden bg-gray-50/30">
+                {/* Lateral Filters */}
+                <div className="w-full lg:w-[320px] bg-white lg:border-r border-gray-100 lg:overflow-y-auto p-8 shrink-0 custom-scrollbar">
+                    <div className="space-y-10">
                         {/* Dates Section */}
-                        <div className="space-y-4">
-                            <h3 className="text-xs font-black text-navy uppercase tracking-widest flex items-center gap-2">
-                                <span className="material-symbols-outlined text-sm">calendar_month</span> Período Solicitado
-                            </h3>
-                            <div className="space-y-3">
-                                <div className="space-y-1.5 text-left">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Data de Retirada</label>
+                        <div className="space-y-5">
+                            <h3 className="text-[10px] font-black text-navy/40 uppercase tracking-[0.2em]">Período</h3>
+                            <div className="grid grid-cols-1 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[9px] font-black text-gray-400 uppercase ml-1">Retirada</label>
                                     <input
                                         type="date"
                                         value={startDate}
                                         onChange={e => setStartDate(e.target.value)}
-                                        className="w-full h-11 px-4 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:ring-4 focus:ring-primary/5 transition-all outline-none font-bold text-navy"
+                                        className="w-full h-11 px-4 rounded-xl border border-gray-100 bg-gray-50 focus:border-navy focus:bg-white focus:ring-0 transition-all outline-none font-bold text-navy"
                                     />
                                 </div>
-                                <div className="space-y-1.5 text-left">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Data de Devolução</label>
+                                <div className="space-y-2">
+                                    <label className="text-[9px] font-black text-gray-400 uppercase ml-1">Devolução</label>
                                     <input
                                         type="date"
                                         value={endDate}
                                         onChange={e => setEndDate(e.target.value)}
-                                        className="w-full h-11 px-4 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:ring-4 focus:ring-primary/5 transition-all outline-none font-bold text-navy"
+                                        className="w-full h-11 px-4 rounded-xl border border-gray-100 bg-gray-50 focus:border-navy focus:bg-white focus:ring-0 transition-all outline-none font-bold text-navy"
                                     />
                                 </div>
                             </div>
                         </div>
 
                         {/* Types Section */}
-                        <div className="space-y-4">
-                            <h3 className="text-xs font-black text-navy uppercase tracking-widest flex items-center gap-2">
-                                <span className="material-symbols-outlined text-sm">checkroom</span> Categorias
-                            </h3>
+                        <div className="space-y-5">
+                            <h3 className="text-[10px] font-black text-navy/40 uppercase tracking-[0.2em]">Categorias</h3>
                             <div className="flex flex-wrap gap-2">
                                 {types.map(type => (
                                     <button
                                         key={type}
                                         onClick={() => handleToggleType(type)}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${searchTypes.includes(type) ? 'bg-navy text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                                        className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${searchTypes.includes(type)
+                                            ? 'bg-navy border-navy text-white'
+                                            : 'bg-white border-gray-100 text-gray-400 hover:border-navy/20 hover:text-navy'
+                                            }`}
                                     >
                                         {type}
                                     </button>
@@ -132,16 +131,17 @@ export default function AvailabilitySearch() {
                         </div>
 
                         {/* Sizes Section */}
-                        <div className="space-y-4">
-                            <h3 className="text-xs font-black text-navy uppercase tracking-widest flex items-center gap-2">
-                                <span className="material-symbols-outlined text-sm">straighten</span> Tamanhos
-                            </h3>
+                        <div className="space-y-5">
+                            <h3 className="text-[10px] font-black text-navy/40 uppercase tracking-[0.2em]">Tamanhos</h3>
                             <div className="grid grid-cols-4 gap-2">
                                 {sizes.map(size => (
                                     <button
                                         key={size}
                                         onClick={() => handleToggleSize(size)}
-                                        className={`h-9 flex items-center justify-center rounded-lg text-xs font-bold transition-all border ${searchSizes.includes(size) ? 'bg-primary border-primary text-white shadow-md' : 'border-gray-100 bg-gray-50 text-gray-400 hover:border-gray-200'}`}
+                                        className={`h-10 flex items-center justify-center rounded-xl text-[10px] font-black transition-all border ${searchSizes.includes(size)
+                                            ? 'bg-navy border-navy text-white'
+                                            : 'bg-white border-gray-100 text-gray-400 hover:border-navy/20 hover:text-navy'
+                                            }`}
                                     >
                                         {size}
                                     </button>
@@ -150,104 +150,117 @@ export default function AvailabilitySearch() {
                         </div>
 
                         {/* Colors Section */}
-                        <div className="space-y-4">
-                            <h3 className="text-xs font-black text-navy uppercase tracking-widest flex items-center gap-2">
-                                <span className="material-symbols-outlined text-sm">palette</span> Cor Predominante
-                            </h3>
-                            <select
-                                value={searchColor}
-                                onChange={e => setSearchColor(e.target.value)}
-                                className="w-full h-11 px-4 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:ring-4 focus:ring-primary/5 transition-all outline-none font-bold text-navy appearance-none"
-                            >
-                                <option value="">Qualquer Cor</option>
-                                {colors.map(color => (
-                                    <option key={color} value={color}>{color}</option>
-                                ))}
-                            </select>
+                        <div className="space-y-5">
+                            <h3 className="text-[10px] font-black text-navy/40 uppercase tracking-[0.2em]">Cores</h3>
+                            <div className="relative">
+                                <select
+                                    value={searchColor}
+                                    onChange={e => setSearchColor(e.target.value)}
+                                    className="w-full h-11 px-4 rounded-xl border border-gray-100 bg-gray-50 focus:border-navy focus:bg-white transition-all outline-none font-bold text-navy appearance-none cursor-pointer"
+                                >
+                                    <option value="">Qualquer Cor</option>
+                                    {colors.map(color => (
+                                        <option key={color} value={color}>{color}</option>
+                                    ))}
+                                </select>
+                                <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-300">expand_more</span>
+                            </div>
                         </div>
 
-                        <button
-                            onClick={handleSearch}
-                            className="w-full py-4 bg-navy text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-navy/20 hover:scale-[1.02] transition-all flex items-center justify-center gap-2 active:scale-95"
-                        >
-                            <span className="material-symbols-outlined text-lg">search</span>
-                            Buscar Disponíveis
-                        </button>
+                        <div className="pt-4">
+                            <button
+                                onClick={handleSearch}
+                                className="w-full py-4 bg-navy text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-black transition-all flex items-center justify-center gap-3 active:scale-95"
+                            >
+                                <span className="material-symbols-outlined text-lg">search</span>
+                                Buscar Peças
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 {/* Results Area */}
-                <div className="flex-1 lg:overflow-y-auto p-6 md:p-8 custom-scrollbar">
+                <div className="flex-1 lg:overflow-y-auto p-8 lg:p-12 custom-scrollbar">
                     {!isSearching ? (
-                        <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-4">
-                            <div className="size-20 rounded-3xl bg-white shadow-xl flex items-center justify-center text-gray-200">
-                                <span className="material-symbols-outlined text-5xl">manage_search</span>
+                        <div className="h-full flex flex-col items-center justify-center text-center animate-in fade-in duration-1000">
+                            <div className="size-20 rounded-3xl bg-gray-50 flex items-center justify-center text-gray-200 mb-8 border border-gray-100">
+                                <span className="material-symbols-outlined text-4xl">search_insights</span>
                             </div>
-                            <div>
-                                <h3 className="text-xl font-black text-navy">Inicie sua busca</h3>
-                                <p className="text-gray-400 font-medium text-sm mt-2">Utilize os filtros à esquerda para encontrar peças exclusivas que estejam livres no período do cliente.</p>
-                            </div>
+                            <h3 className="text-2xl font-black text-navy mb-3">Inicie sua busca inteligente</h3>
+                            <p className="max-w-md text-gray-400 font-bold text-sm leading-relaxed">
+                                Selecione as datas de interesse e utilize os filtros ao lado para visualizar os itens disponíveis em nosso acervo.
+                            </p>
                         </div>
                     ) : results.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-4">
-                            <div className="size-20 rounded-3xl bg-red-50 text-red-100 flex items-center justify-center">
-                                <span className="material-symbols-outlined text-5xl">heart_broken</span>
+                            <div className="size-20 rounded-3xl bg-gray-50 text-gray-300 flex items-center justify-center border border-gray-100">
+                                <span className="material-symbols-outlined text-4xl">search_off</span>
                             </div>
-                            <div>
-                                <h3 className="text-xl font-black text-navy">Nenhum item encontrado</h3>
-                                <p className="text-gray-400 font-medium text-sm mt-2">Não encontramos peças com estes critérios nas datas solicitadas. Tente ajustar os filtros ou as datas.</p>
+                            <div className="space-y-2">
+                                <h3 className="text-xl font-black text-navy italic">Nenhum item encontrado</h3>
+                                <p className="text-gray-400 font-bold text-xs leading-relaxed">
+                                    Não encontramos peças disponíveis para este período com os filtros selecionados.
+                                </p>
                             </div>
+                            <button onClick={() => setIsSearching(false)} className="text-[10px] font-black text-navy uppercase tracking-widest hover:underline pt-4">
+                                Voltar ao Início
+                            </button>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            {results.map(item => (
-                                <div key={item.id} className="group bg-white rounded-[2rem] border border-gray-100 overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all hover:-translate-y-1">
-                                    {/* Image */}
-                                    <div className="relative aspect-[3/4] bg-gray-100 overflow-hidden">
-                                        <img src={item.img} alt={item.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                                        <div className="absolute top-4 left-4">
-                                            <span className="px-3 py-1.5 rounded-full bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20">
-                                                Disponível
-                                            </span>
+                        <div className="space-y-12">
+                            <div className="flex items-center justify-between border-b border-gray-100 pb-8">
+                                <div className="space-y-1">
+                                    <h3 className="text-2xl font-black text-navy tracking-tight">Resultados</h3>
+                                    <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">{results.length} Itens Encontrados</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-10 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+                                {results.map(item => (
+                                    <div key={item.id} className="group flex flex-col">
+                                        {/* Image */}
+                                        <div className="relative aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden mb-5">
+                                            <img src={item.img} alt={item.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+
+                                            {/* Minimalist Availability Overlay */}
+                                            <div className="absolute inset-0 bg-navy/20 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center p-6 gap-2">
+                                                <button
+                                                    onClick={() => handleReserve(item)}
+                                                    className="w-full py-3 bg-white text-navy rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-navy hover:text-white transition-all transform translate-y-4 group-hover:translate-y-0 duration-300 shadow-sm"
+                                                >
+                                                    Reservar
+                                                </button>
+                                                <button
+                                                    onClick={() => setSelectedItemForTimeline(item)}
+                                                    className="size-11 flex items-center justify-center bg-white/20 backdrop-blur-md text-white border border-white/30 rounded-xl hover:bg-white/30 transition-all transform translate-y-4 group-hover:translate-y-0 duration-500"
+                                                >
+                                                    <span className="material-symbols-outlined text-lg">calendar_today</span>
+                                                </button>
+                                            </div>
                                         </div>
-                                        {/* Hover Overlay */}
-                                        <div className="absolute inset-0 bg-navy/40 opacity-0 group-hover:opacity-100 transition-all backdrop-blur-[2px] flex flex-col items-center justify-center p-6 gap-3">
-                                            <button
-                                                onClick={() => handleReserve(item)}
-                                                className="w-full py-3 bg-white text-navy rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary hover:text-white transition-all transform translate-y-4 group-hover:translate-y-0 duration-300"
-                                            >
-                                                Reservar Agora
-                                            </button>
-                                            <button
-                                                onClick={() => setSelectedItemForTimeline(item)}
-                                                className="w-full py-3 bg-white/20 backdrop-blur-md text-white border border-white/30 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-white/30 transition-all transform translate-y-4 group-hover:translate-y-0 duration-500"
-                                            >
-                                                Ver Calendário
-                                            </button>
-                                        </div>
-                                    </div>
-                                    {/* Info */}
-                                    <div className="p-5">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <h4 className="font-black text-navy text-sm leading-tight line-clamp-2">{item.name}</h4>
-                                            <span className="text-[10px] font-black text-gray-400 border border-gray-100 px-2 py-0.5 rounded uppercase">{item.size}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-[10px] text-gray-400 font-bold mb-4">
-                                            <span className="material-symbols-outlined text-[14px]">palette</span> {item.color}
-                                            <span className="size-1 rounded-full bg-gray-200"></span>
-                                            <span className="capitalize">{item.type}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center pt-4 border-t border-gray-50">
-                                            <p className="text-xs font-black text-primary">
-                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.price || 0)}
-                                            </p>
-                                            <div className="size-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-300 group-hover:text-primary transition-colors">
-                                                <span className="material-symbols-outlined text-lg">arrow_forward</span>
+
+                                        {/* Content - Minimalist Style */}
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-start gap-2">
+                                                <h4 className="font-black text-navy text-xs leading-tight line-clamp-2 uppercase tracking-wide">{item.name}</h4>
+                                                <span className="text-[9px] font-black text-gray-300 uppercase shrink-0">{item.size}</span>
+                                            </div>
+
+                                            <div className="flex items-center gap-3 text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                                                <span>{item.color}</span>
+                                                <span className="size-1 rounded-full bg-gray-200" />
+                                                <span>{item.type}</span>
+                                            </div>
+
+                                            <div className="pt-3 border-t border-gray-50">
+                                                <p className="text-sm font-black text-primary">
+                                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.price || 0)}
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>

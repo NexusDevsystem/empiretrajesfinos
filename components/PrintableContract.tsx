@@ -5,6 +5,53 @@ import SignatureModal from './SignatureModal';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
+const LEGACY_FIELDS = [
+    { k: 'height', l: 'Altura' },
+    { k: 'weight', l: 'Peso' },
+    { k: 'shoeSize', l: 'Sapato' },
+    { k: 'shirtSize', l: 'Camisa' },
+    { k: 'pantsSize', l: 'Calça' },
+    { k: 'jacketSize', l: 'Paletó' },
+    { k: 'chest', l: 'Tórax' },
+    { k: 'waist', l: 'Cintura' },
+    { k: 'hips', l: 'Quadril' },
+    { k: 'shoulder', l: 'Ombro' },
+    { k: 'sleeve', l: 'Manga' },
+    { k: 'inseam', l: 'Gancho' },
+    { k: 'neck', l: 'Colarinho' }
+];
+
+const DEBUTANTE_FIELDS = [
+    { k: 'busto', l: 'Busto' },
+    { k: 'abBusto', l: 'AB. Busto' },
+    { k: 'cintura', l: 'Cintura' },
+    { k: 'quadril', l: 'Quadril' },
+    { k: 'altQuadril', l: 'Alt. Quadril' },
+    { k: 'ombro', l: 'Ombro' },
+    { k: 'manga', l: 'Manga' },
+    { k: 'cava', l: 'Cava' },
+    { k: 'frente', l: 'Frente' },
+    { k: 'costa', l: 'Costa' },
+    { k: 'comprBlusa', l: 'Compr. Blusa' },
+    { k: 'comprSaia', l: 'Compr. Saia' },
+    { k: 'comprShort', l: 'Compr. Short' },
+    { k: 'comprManga', l: 'Compr. Manga' },
+    { k: 'colarinho', l: 'Colarinho' },
+    { k: 'largBraco', l: 'Larg. Braço' },
+    { k: 'punho', l: 'Punho' }
+];
+
+const COMMON_FIELDS = [
+    { k: 'busto', l: 'Busto' },
+    { k: 'abBusto', l: 'Abaix. Busto' },
+    { k: 'cintura', l: 'Cintura' },
+    { k: 'terno', l: 'Terno' },
+    { k: 'cm', l: 'CM' },
+    { k: 'calca', l: 'Calça' },
+    { k: 'cc', l: 'CC' },
+    { k: 'height', l: 'Altura' }, { k: 'weight', l: 'Peso' }, { k: 'shoeSize', l: 'Sapato' }
+];
+
 interface PrintableContractProps {
     contract: Contract;
     client: Client;
@@ -414,19 +461,12 @@ export default function PrintableContract({ contract, client, items, onClose }: 
                                 <span className="material-symbols-outlined text-navy/20 text-xl">schedule</span>
                             </div>
 
-                            {/* Measurements Table (Compact) */}
-                            <div className="grid grid-cols-3 gap-2">
-                                {[
-                                    { label: 'Altura', key: 'height' },
-                                    { label: 'Peso', key: 'weight' },
-                                    { label: 'Tórax', key: 'chest' },
-                                    { label: 'Cintura', key: 'waist' },
-                                    { label: 'Dorso', key: 'neck' },
-                                    { label: 'Manga', key: 'sleeve' }
-                                ].map((m) => (
-                                    <div key={m.key} className="border-b border-gray-100 flex flex-col">
-                                        <span className="text-[7px] font-black text-gray-400 uppercase leading-none">{m.label}</span>
-                                        <span className="text-[10px] font-black text-navy h-3">{contract.measurements?.[m.key] || '____'}</span>
+                            {/* Measurements Table (Dynamic) */}
+                            <div className="grid grid-cols-4 sm:grid-cols-6 gap-x-3 gap-y-1">
+                                {((!client.profileType ? LEGACY_FIELDS : (client.profileType === 'Debutante' ? DEBUTANTE_FIELDS : COMMON_FIELDS))).map((m) => (
+                                    <div key={m.k} className="border-b border-gray-100 flex flex-col">
+                                        <span className="text-[6.5px] font-black text-gray-400 uppercase leading-none truncate">{m.l}</span>
+                                        <span className="text-[9px] font-black text-navy h-3">{contract.measurements?.[m.k] || '____'}</span>
                                     </div>
                                 ))}
                             </div>

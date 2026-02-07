@@ -131,6 +131,7 @@ const mapClientFromDB = (db: any): Client => ({
     state: db.address_state,
     zip: db.address_zip,
     birthDate: db.birth_date,
+    profileType: db.profile_type,
     measurements: db.measurements,
     img: ''
 });
@@ -160,6 +161,7 @@ const mapClientToDB = (client: Client) => ({
     address_state: client.state,
     address_zip: client.zip,
     birth_date: client.birthDate,
+    profile_type: client.profileType,
     measurements: client.measurements
 });
 

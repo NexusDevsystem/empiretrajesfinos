@@ -15,6 +15,53 @@ const STEPS = [
     { num: 3, title: 'Revisão e Pagamento', icon: 'payments' },
 ];
 
+const LEGACY_FIELDS = [
+    { k: 'height', l: 'Altura' },
+    { k: 'weight', l: 'Peso' },
+    { k: 'shoeSize', l: 'Sapato' },
+    { k: 'shirtSize', l: 'Camisa' },
+    { k: 'pantsSize', l: 'Calça' },
+    { k: 'jacketSize', l: 'Paletó' },
+    { k: 'chest', l: 'Tórax' },
+    { k: 'waist', l: 'Cintura' },
+    { k: 'hips', l: 'Quadril' },
+    { k: 'shoulder', l: 'Ombro' },
+    { k: 'sleeve', l: 'Manga' },
+    { k: 'inseam', l: 'Gancho' },
+    { k: 'neck', l: 'Colarinho' }
+];
+
+const DEBUTANTE_FIELDS = [
+    { k: 'busto', l: 'Busto' },
+    { k: 'abBusto', l: 'AB. Busto' },
+    { k: 'cintura', l: 'Cintura' },
+    { k: 'quadril', l: 'Quadril' },
+    { k: 'altQuadril', l: 'Alt. Quadril' },
+    { k: 'ombro', l: 'Ombro' },
+    { k: 'manga', l: 'Manga' },
+    { k: 'cava', l: 'Cava' },
+    { k: 'frente', l: 'Frente' },
+    { k: 'costa', l: 'Costa' },
+    { k: 'comprBlusa', l: 'Compr. Blusa' },
+    { k: 'comprSaia', l: 'Compr. Saia' },
+    { k: 'comprShort', l: 'Compr. Short' },
+    { k: 'comprManga', l: 'Compr. Manga' },
+    { k: 'colarinho', l: 'Colarinho' },
+    { k: 'largBraco', l: 'Larg. Braço' },
+    { k: 'punho', l: 'Punho' }
+];
+
+const COMMON_FIELDS = [
+    { k: 'busto', l: 'Busto' },
+    { k: 'abBusto', l: 'Abaix. Busto' },
+    { k: 'cintura', l: 'Cintura' },
+    { k: 'terno', l: 'Terno' },
+    { k: 'cm', l: 'CM' },
+    { k: 'calca', l: 'Calça' },
+    { k: 'cc', l: 'CC' },
+    { k: 'height', l: 'Altura' }, { k: 'weight', l: 'Peso' }, { k: 'shoeSize', l: 'Sapato' }
+];
+
 import { CONTRACT_CLAUSES } from '../constants/clauses';
 import { maskCPF, maskPhone, maskCEP } from '../utils/maskUtils';
 
@@ -66,6 +113,8 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
     const [guestRole, setGuestRole] = useState<'Anfitrião' | 'Convidado'>('Anfitrião');
     const [isFirstRental, setIsFirstRental] = useState(false);
 
+    // New Client (Matching CRM structure)
+
     const searchRef = useRef<HTMLDivElement>(null);
 
     // Initialize from Wizard Initial Data
@@ -98,34 +147,24 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // New Client Details (Full Form)
-    const [newClientDetails, setNewClientDetails] = useState({
-        name: '',
-        phone: '',
-        email: '',
-        cpf: '',
-        rg: '',
-        address: '',
-        neighborhood: '',
-        city: '',
-        state: '',
-        zip: '',
-        birthDate: '',
-        measurements: {
-            height: '', weight: '', shoeSize: '', shirtSize: '', pantsSize: '', jacketSize: '',
-            chest: '', waist: '', hips: '', shoulder: '', sleeve: '', inseam: '', neck: ''
-        }
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedClient, setSelectedClient] = useState<import('../types').Client | null>(null);
+    const [newClient, setNewClient] = useState<Partial<import('../types').Client>>({
+        name: '', phone: '', cpf: '', rg: '', email: '', birthDate: '',
+        address: '', neighborhood: '', city: '', state: '', zip: '',
+        profileType: 'Comum',
+        measurements: {}
     });
 
     const handleCEPChange = async (cep: string) => {
         const formatted = maskCEP(cep);
-        setNewClientDetails(prev => ({ ...prev, zip: formatted }));
+        setNewClient(prev => ({ ...prev, zip: formatted }));
 
         const cleanCep = cep.replace(/\D/g, '');
         if (cleanCep.length === 8) {
             const addressData = await viaCepAPI.getAddress(cleanCep);
             if (addressData) {
-                setNewClientDetails(prev => ({
+                setNewClient(prev => ({
                     ...prev,
                     address: addressData.address,
                     neighborhood: addressData.neighborhood,
@@ -146,7 +185,7 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
 
     // Catalog Filter
     const [catFilter, setCatFilter] = useState('Todos');
-    const [searchTerm, setSearchTerm] = useState('');
+    // const [searchTerm, setSearchTerm] = useState(''); // Moved up
 
     // Dynamic Categories for Filter
     const availableCategories = useMemo(() => {
@@ -256,7 +295,18 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
 
 
     // Validation Logic
-    const selectedClient = clients.find(c => c.id === clientId);
+    // const selectedClient = useMemo(() => clients.find(c => c.id === clientId), [clients, clientId]); // Now a state variable
+
+    // Sync profile type with event type
+    useEffect(() => {
+        if (isCreatingNewClient) {
+            if (eventType === 'Debutante') {
+                setNewClient(prev => ({ ...prev, profileType: 'Debutante' }));
+            } else {
+                setNewClient(prev => ({ ...prev, profileType: 'Comum' }));
+            }
+        }
+    }, [eventType, isCreatingNewClient]);
 
     const REQUIRED_FIELDS = [
         { key: 'cpf', label: 'CPF' },
@@ -274,14 +324,17 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
     const isClientValid = missingFields.length === 0;
 
     // For new clients (Step 1 validation only)
-    const isNewClientValid = isCreatingNewClient && newClientDetails.name && newClientDetails.phone;
+    const isNewClientValid = isCreatingNewClient && newClient.name && newClient.phone;
 
     // Handlers
     const handleSelectClient = (client: import('../types').Client) => {
         setClientId(client.id);
+        setSelectedClient(client); // Set the selected client state
         setClientSearch(client.name);
         setShowSuggestions(false);
         setIsCreatingNewClient(false);
+        // Sync profile type for measurement rendering
+        setNewClient(prev => ({ ...prev, profileType: client.profileType }));
         // Pre-fill contract measurements with client's current measurements
         if (client.measurements) {
             setContractMeasurements(client.measurements);
@@ -290,9 +343,10 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
 
     const handleCreateNewClick = () => {
         setIsCreatingNewClient(true);
-        setNewClientDetails(prev => ({ ...prev, name: clientSearch }));
+        setNewClient(prev => ({ ...prev, name: clientSearch }));
         setShowSuggestions(false);
         setClientId('');
+        setSelectedClient(null); // Clear selected client when creating new
     };
 
     const handleNext = async () => {
@@ -312,7 +366,7 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
 
             if (isCreatingNewClient) {
                 // Validate New Client
-                if (!newClientDetails.name || !newClientDetails.phone) {
+                if (!newClient.name || !newClient.phone) {
                     showToast('error', 'Preencha nome e telefone para continuar.');
                     return;
                 }
@@ -320,15 +374,16 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                 try {
                     // Create Client and WAIT for real ID
                     const newId = `TEMP_${Date.now()}`;
-                    const newClientObj: import('../types').Client = {
-                        ...newClientDetails,
+                    const clientData: Partial<import('../types').Client> = { // Changed type to Partial
+                        ...newClient,
                         id: newId,
-                        initials: newClientDetails.name.slice(0, 2).toUpperCase()
+                        initials: (newClient.name || '').slice(0, 2).toUpperCase()
                     };
 
-                    const savedClient = await addClient(newClientObj);
+                    const savedClient = await addClient(clientData as import('../types').Client); // Cast to Client
                     setClientId(savedClient.id);
-                    setContractMeasurements(newClientDetails.measurements);
+                    setSelectedClient(savedClient); // Set the newly created client as selected
+                    setContractMeasurements(newClient.measurements);
                     setIsCreatingNewClient(false);
                     showToast('success', 'Cliente cadastrado com sucesso!');
                     setStep(2); // Manually move to next step after async
@@ -514,7 +569,7 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
             id: `CN-${timestamp}-${random}`,
             contractType,
             clientId,
-            clientName: selectedClient?.name || newClientDetails.name,
+            clientName: selectedClient?.name || newClient.name || '',
             items: [
                 ...selectedItemIds.filter(id => !saleItemIds.includes(id)),
                 ...(selectedPackage ? Object.values(packageSlots) : [])
@@ -817,8 +872,8 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                                                 <div>
                                                     <label className="block text-[10px] font-bold text-black uppercase mb-1">Nome Completo *</label>
                                                     <input
-                                                        value={newClientDetails.name}
-                                                        onChange={e => setNewClientDetails({ ...newClientDetails, name: e.target.value })}
+                                                        value={newClient.name || ''}
+                                                        onChange={e => setNewClient({ ...newClient, name: e.target.value })}
                                                         className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary/20 outline-none bg-white"
                                                         placeholder="Nome do cliente"
                                                     />
@@ -826,8 +881,8 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                                                 <div>
                                                     <label className="block text-[10px] font-bold text-black uppercase mb-1">Telefone *</label>
                                                     <input
-                                                        value={newClientDetails.phone}
-                                                        onChange={e => setNewClientDetails({ ...newClientDetails, phone: maskPhone(e.target.value) })}
+                                                        value={newClient.phone}
+                                                        onChange={e => setNewClient({ ...newClient, phone: maskPhone(e.target.value) })}
                                                         className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary/20 outline-none bg-white"
                                                         placeholder="(00) 00000-0000"
                                                     />
@@ -835,8 +890,8 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                                                 <div>
                                                     <label className="block text-[10px] font-bold text-black uppercase mb-1">CPF <span className="text-red-500">*</span></label>
                                                     <input
-                                                        value={newClientDetails.cpf}
-                                                        onChange={e => setNewClientDetails({ ...newClientDetails, cpf: maskCPF(e.target.value) })}
+                                                        value={newClient.cpf}
+                                                        onChange={e => setNewClient({ ...newClient, cpf: maskCPF(e.target.value) })}
                                                         className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary/20 outline-none bg-white"
                                                         placeholder="000.000.000-00"
                                                     />
@@ -844,8 +899,8 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                                                 <div>
                                                     <label className="block text-[10px] font-bold text-black uppercase mb-1">RG</label>
                                                     <input
-                                                        value={newClientDetails.rg}
-                                                        onChange={e => setNewClientDetails({ ...newClientDetails, rg: e.target.value })}
+                                                        value={newClient.rg}
+                                                        onChange={e => setNewClient({ ...newClient, rg: e.target.value })}
                                                         className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary/20 outline-none bg-white"
                                                         placeholder="00.000.000-0"
                                                     />
@@ -854,16 +909,16 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                                                     <label className="block text/[10px] font-bold text-gray-400 uppercase mb-1">Data Nascimento *</label>
                                                     <input
                                                         type="date"
-                                                        value={newClientDetails.birthDate}
-                                                        onChange={e => setNewClientDetails({ ...newClientDetails, birthDate: e.target.value })}
+                                                        value={newClient.birthDate}
+                                                        onChange={e => setNewClient({ ...newClient, birthDate: e.target.value })}
                                                         className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary/20 outline-none bg-white font-sans"
                                                     />
                                                 </div>
                                                 <div className="md:col-span-2">
                                                     <label className="block text-[10px] font-bold text-black uppercase mb-1">Email <span className="text-red-500">*</span></label>
                                                     <input
-                                                        value={newClientDetails.email}
-                                                        onChange={e => setNewClientDetails({ ...newClientDetails, email: e.target.value })}
+                                                        value={newClient.email}
+                                                        onChange={e => setNewClient({ ...newClient, email: e.target.value })}
                                                         className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary/20 outline-none bg-white"
                                                         placeholder="email@exemplo.com"
                                                     />
@@ -875,8 +930,8 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                                                 <div className="col-span-2">
                                                     <label className="block text-[10px] font-bold text-black uppercase mb-1">Endereço <span className="text-red-500">*</span></label>
                                                     <input
-                                                        value={newClientDetails.address}
-                                                        onChange={e => setNewClientDetails({ ...newClientDetails, address: e.target.value })}
+                                                        value={newClient.address}
+                                                        onChange={e => setNewClient({ ...newClient, address: e.target.value })}
                                                         className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary/20 outline-none bg-white"
                                                         placeholder="Rua, Número, Complemento"
                                                     />
@@ -884,24 +939,24 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                                                 <div>
                                                     <label className="block text-[10px] font-bold text-black uppercase mb-1">Bairro <span className="text-red-500">*</span></label>
                                                     <input
-                                                        value={newClientDetails.neighborhood}
-                                                        onChange={e => setNewClientDetails({ ...newClientDetails, neighborhood: e.target.value })}
+                                                        value={newClient.neighborhood}
+                                                        onChange={e => setNewClient({ ...newClient, neighborhood: e.target.value })}
                                                         className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary/20 outline-none bg-white"
                                                     />
                                                 </div>
                                                 <div className="col-span-1">
                                                     <label className="block text-[10px] font-bold text-black uppercase mb-1">Cidade <span className="text-red-500">*</span></label>
                                                     <input
-                                                        value={newClientDetails.city}
-                                                        onChange={e => setNewClientDetails({ ...newClientDetails, city: e.target.value })}
+                                                        value={newClient.city}
+                                                        onChange={e => setNewClient({ ...newClient, city: e.target.value })}
                                                         className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary/20 outline-none bg-white"
                                                     />
                                                 </div>
                                                 <div className="col-span-1">
                                                     <label className="block text-[10px] font-bold text-black uppercase mb-1">Estado <span className="text-red-500">*</span></label>
                                                     <select
-                                                        value={newClientDetails.state}
-                                                        onChange={e => setNewClientDetails({ ...newClientDetails, state: e.target.value })}
+                                                        value={newClient.state}
+                                                        onChange={e => setNewClient({ ...newClient, state: e.target.value })}
                                                         className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary/20 outline-none bg-white h-9"
                                                     >
                                                         <option value="">UF</option>
@@ -913,7 +968,7 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                                                 <div className="col-span-1">
                                                     <label className="block text-[10px] font-bold text-black uppercase mb-1">CEP <span className="text-red-500">*</span></label>
                                                     <input
-                                                        value={newClientDetails.zip}
+                                                        value={newClient.zip}
                                                         onChange={e => handleCEPChange(e.target.value)}
                                                         className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary/20 outline-none bg-white"
                                                         placeholder="00000-000"
@@ -922,26 +977,40 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                                             </div>
 
                                             <div className="pt-4 border-t border-gray-100">
-                                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-3 flex items-center gap-2">
-                                                    <span className="material-symbols-outlined text-base">straighten</span> Medidas (Opcional)
-                                                </label>
+                                                <div className="flex justify-between items-center mb-3">
+                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase flex items-center gap-2">
+                                                        <span className="material-symbols-outlined text-base">straighten</span> Medidas (Opcional - {isCreatingNewClient || newClient.profileType ? (newClient.profileType || 'Comum') : 'Legado'})
+                                                    </label>
+                                                    {(isCreatingNewClient || newClient.profileType) ? (
+                                                        <div className="flex bg-gray-100 p-0.5 rounded-lg border border-gray-200">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setNewClient({ ...newClient, profileType: 'Comum' })}
+                                                                className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all ${newClient.profileType !== 'Debutante' ? 'bg-white shadow text-navy' : 'text-gray-400 hover:text-gray-600'}`}
+                                                            >
+                                                                Comum
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setNewClient({ ...newClient, profileType: 'Debutante' })}
+                                                                className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all ${newClient.profileType === 'Debutante' ? 'bg-white shadow text-navy' : 'text-gray-400 hover:text-gray-600'}`}
+                                                            >
+                                                                Debutante
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-[9px] text-gray-400 italic font-medium">Perfil Legado Preservado</span>
+                                                    )}
+                                                </div>
                                                 <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-                                                    {[
-                                                        { k: 'height', l: 'Altura' }, { k: 'weight', l: 'Peso' },
-                                                        { k: 'shoeSize', l: 'Sapato' }, { k: 'shirtSize', l: 'Camisa' },
-                                                        { k: 'pantsSize', l: 'Calça' }, { k: 'jacketSize', l: 'Paletó' },
-                                                        { k: 'neck', l: 'Pescoço' }, { k: 'chest', l: 'Tórax' },
-                                                        { k: 'waist', l: 'Cintura' }, { k: 'hips', l: 'Quadril' },
-                                                        { k: 'shoulder', l: 'Ombro' }, { k: 'sleeve', l: 'Manga' },
-                                                        { k: 'inseam', l: 'Entrepernas' }
-                                                    ].map((m) => (
+                                                    {(!isCreatingNewClient && !newClient.profileType ? LEGACY_FIELDS : (newClient.profileType === 'Debutante' ? DEBUTANTE_FIELDS : COMMON_FIELDS)).map((m) => (
                                                         <div key={m.k}>
                                                             <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">{m.l}</label>
                                                             <input
-                                                                value={(newClientDetails.measurements as any)?.[m.k] || ''}
-                                                                onChange={e => setNewClientDetails({
-                                                                    ...newClientDetails,
-                                                                    measurements: { ...newClientDetails.measurements, [m.k]: e.target.value }
+                                                                value={(newClient.measurements as any)?.[m.k] || ''}
+                                                                onChange={e => setNewClient({
+                                                                    ...newClient,
+                                                                    measurements: { ...newClient.measurements, [m.k]: e.target.value }
                                                                 })}
                                                                 className="w-full h-9 px-2 text-center rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary/20 outline-none text-sm font-bold text-navy"
                                                             />
@@ -1863,7 +1932,7 @@ export default function NewContractModal({ isOpen, onClose }: NewContractModalPr
                         disabled={
                             (step === 1 && (
                                 isCreatingNewClient
-                                    ? (!newClientDetails.name || !newClientDetails.phone)
+                                    ? (!newClient.name || '' || !newClient.phone)
                                     : (contractType === 'Aluguel' ? (!startDate || !endDate || !clientId) : (!eventDate || !clientId))
                             )) ||
                             (step === 2 && selectedItemIds.length === 0 && !selectedPackage) ||

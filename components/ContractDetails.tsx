@@ -9,6 +9,54 @@ import { receiptsAPI } from '../services/api';
 import { Receipt } from '../types';
 import PrintableReceipt from './PrintableReceipt';
 import ContractItemsEditor from './ContractItemsEditor';
+import ContractInfoEditor from './ContractInfoEditor';
+
+const LEGACY_FIELDS = [
+    { k: 'height', l: 'Altura' },
+    { k: 'weight', l: 'Peso' },
+    { k: 'shoeSize', l: 'Sapato' },
+    { k: 'shirtSize', l: 'Camisa' },
+    { k: 'pantsSize', l: 'Calça' },
+    { k: 'jacketSize', l: 'Paletó' },
+    { k: 'chest', l: 'Tórax' },
+    { k: 'waist', l: 'Cintura' },
+    { k: 'hips', l: 'Quadril' },
+    { k: 'shoulder', l: 'Ombro' },
+    { k: 'sleeve', l: 'Manga' },
+    { k: 'inseam', l: 'Gancho' },
+    { k: 'neck', l: 'Colarinho' }
+];
+
+const DEBUTANTE_FIELDS = [
+    { k: 'busto', l: 'Busto' },
+    { k: 'abBusto', l: 'AB. Busto' },
+    { k: 'cintura', l: 'Cintura' },
+    { k: 'quadril', l: 'Quadril' },
+    { k: 'altQuadril', l: 'Alt. Quadril' },
+    { k: 'ombro', l: 'Ombro' },
+    { k: 'manga', l: 'Manga' },
+    { k: 'cava', l: 'Cava' },
+    { k: 'frente', l: 'Frente' },
+    { k: 'costa', l: 'Costa' },
+    { k: 'comprBlusa', l: 'Compr. Blusa' },
+    { k: 'comprSaia', l: 'Compr. Saia' },
+    { k: 'comprShort', l: 'Compr. Short' },
+    { k: 'comprManga', l: 'Compr. Manga' },
+    { k: 'colarinho', l: 'Colarinho' },
+    { k: 'largBraco', l: 'Larg. Braço' },
+    { k: 'punho', l: 'Punho' }
+];
+
+const COMMON_FIELDS = [
+    { k: 'busto', l: 'Busto' },
+    { k: 'abBusto', l: 'Abaix. Busto' },
+    { k: 'cintura', l: 'Cintura' },
+    { k: 'terno', l: 'Terno' },
+    { k: 'cm', l: 'CM' },
+    { k: 'calca', l: 'Calça' },
+    { k: 'cc', l: 'CC' },
+    { k: 'height', l: 'Altura' }, { k: 'weight', l: 'Peso' }, { k: 'shoeSize', l: 'Sapato' }
+];
 
 interface ContractDetailsProps {
     contract: Contract;
@@ -29,6 +77,7 @@ export default function ContractDetails({ contract, client, items, onClose, onPr
     const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
     const [isReceiptConfirmOpen, setIsReceiptConfirmOpen] = useState(false);
     const [isEditItemsOpen, setIsEditItemsOpen] = useState(false);
+    const [isEditInfoOpen, setIsEditInfoOpen] = useState(false);
 
     const handleCancelContract = () => {
         // 1. Update Contract Status
@@ -126,16 +175,26 @@ export default function ContractDetails({ contract, client, items, onClose, onPr
                     <div className="p-4 md:p-8 space-y-6 md:space-y-8">
 
                         {/* Status Banner */}
-                        <div className={`p-4 rounded-2xl border flex items-center gap-4 ${statusColors[contract.status] || statusColors['Agendado']}`}>
-                            <div className="size-10 rounded-full bg-white/50 flex items-center justify-center shrink-0">
-                                <span className="material-symbols-outlined">
-                                    {contract.status === 'Cancelado' ? 'block' : 'info'}
-                                </span>
+                        <div className={`p-4 rounded-2xl border flex items-center justify-between gap-4 ${statusColors[contract.status] || statusColors['Agendado']}`}>
+                            <div className="flex items-center gap-4">
+                                <div className="size-10 rounded-full bg-white/50 flex items-center justify-center shrink-0">
+                                    <span className="material-symbols-outlined">
+                                        {contract.status === 'Cancelado' ? 'block' : 'info'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold opacity-70 uppercase tracking-widest">Status Atual</p>
+                                    <p className="text-lg font-black leading-none">{contract.status}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-xs font-bold opacity-70 uppercase tracking-widest">Status Atual</p>
-                                <p className="text-lg font-black leading-none">{contract.status}</p>
-                            </div>
+
+                            <button
+                                onClick={() => setIsEditInfoOpen(true)}
+                                className="px-4 py-2 bg-white/40 hover:bg-white/60 text-current rounded-xl font-bold text-xs flex items-center gap-2 transition-all active:scale-95"
+                            >
+                                <span className="material-symbols-outlined text-sm">edit_note</span>
+                                Editar Dados
+                            </button>
                         </div>
 
                         {/* Client Info */}
@@ -337,25 +396,17 @@ export default function ContractDetails({ contract, client, items, onClose, onPr
                                     {/* Measurements Snapshot */}
                                     {contract.contractType !== 'Venda' ? (
                                         <div>
-                                            <p className="text-[10px] text-gray-400 uppercase font-black mb-3">Medidas no Contrato</p>
+                                            <p className="text-[10px] text-gray-400 uppercase font-black mb-3">Medidas no Contrato ({client.profileType || 'Legado'})</p>
                                             <div className="grid grid-cols-2 gap-2">
-                                                {contract.measurements ? (
-                                                    Object.entries(contract.measurements).map(([key, value]) => {
-                                                        const labels: Record<string, string> = {
-                                                            height: 'Altura', weight: 'Peso', shoeSize: 'Sapato',
-                                                            shirtSize: 'Camisa', pantsSize: 'Calça', jacketSize: 'Paletó',
-                                                            chest: 'Tórax', waist: 'Cintura', hips: 'Quadril',
-                                                            shoulder: 'Ombro', sleeve: 'Manga', inseam: 'Entrepernas',
-                                                            neck: 'Pescoço'
-                                                        };
-                                                        if (!labels[key]) return null;
-                                                        return (
-                                                            <div key={key} className="flex justify-between items-center p-2 bg-gray-50/50 rounded-lg border border-gray-100">
-                                                                <span className="text-[10px] font-bold text-gray-400 uppercase">{labels[key]}</span>
-                                                                <span className="text-xs font-black text-navy">{String(value) || '--'}</span>
+                                                {contract.measurements && Object.keys(contract.measurements).length > 0 ? (
+                                                    (!client.profileType ? LEGACY_FIELDS : (client.profileType === 'Debutante' ? DEBUTANTE_FIELDS : COMMON_FIELDS))
+                                                        .filter(m => contract.measurements?.[m.k])
+                                                        .map((m) => (
+                                                            <div key={m.k} className="flex justify-between items-center p-2 bg-gray-50/50 rounded-lg border border-gray-100">
+                                                                <span className="text-[10px] font-bold text-gray-400 uppercase">{m.l}</span>
+                                                                <span className="text-xs font-black text-navy">{String(contract.measurements![m.k]) || '--'}</span>
                                                             </div>
-                                                        );
-                                                    })
+                                                        ))
                                                 ) : (
                                                     <p className="text-xs text-gray-400 italic col-span-2">Sem medidas registradas.</p>
                                                 )}
@@ -665,6 +716,17 @@ export default function ContractDetails({ contract, client, items, onClose, onPr
                         contract={contract}
                         isOpen={isEditItemsOpen}
                         onClose={() => setIsEditItemsOpen(false)}
+                    />
+                )
+            }
+
+            {/* Edit Info Modal */}
+            {
+                isEditInfoOpen && (
+                    <ContractInfoEditor
+                        contract={contract}
+                        isOpen={isEditInfoOpen}
+                        onClose={() => setIsEditInfoOpen(false)}
                     />
                 )
             }

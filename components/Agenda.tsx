@@ -289,7 +289,7 @@ export default function Agenda() {
 
                                 const handleConfirmPickup = (e: React.MouseEvent) => {
                                     e.stopPropagation();
-                                    if (!contract.lesseeSignature) {
+                                    if (!contract.lesseeSignature && !contract.isPhysicallySigned) {
                                         setAlertConfig({
                                             isOpen: true,
                                             title: 'Retirada Bloqueada',
@@ -514,7 +514,7 @@ export default function Agenda() {
                                                 {dayAppts.map(a => {
                                                     let bgClass = 'bg-gray-100 text-gray-700 border-gray-200';
                                                     switch (a.type) {
-                                                        case 'Primeira Visit': bgClass = 'bg-amber-100 text-amber-700 border-amber-200'; break;
+                                                        case 'Primeira Visita': bgClass = 'bg-amber-100 text-amber-700 border-amber-200'; break;
                                                         case 'Prova de Traje': bgClass = 'bg-blue-100 text-blue-700 border-blue-200'; break;
                                                         case 'Retirada': bgClass = 'bg-emerald-100 text-emerald-700 border-emerald-200'; break;
                                                         case 'Devolução': bgClass = 'bg-orange-100 text-orange-700 border-orange-200'; break;

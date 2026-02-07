@@ -12,31 +12,64 @@ const formatPhone = (v: string) => v.replace(/\D/g, '').replace(/^(\d{2})(\d)/g,
 const formatCEP = (v: string) => v.replace(/\D/g, '').replace(/(\d{5})(\d)/, '$1-$2').replace(/(-\d{3})\d+?$/, '$1');
 
 
+const LEGACY_FIELDS = [
+    { k: 'height', l: 'Altura' },
+    { k: 'weight', l: 'Peso' },
+    { k: 'shoeSize', l: 'Sapato' },
+    { k: 'shirtSize', l: 'Camisa' },
+    { k: 'pantsSize', l: 'Calça' },
+    { k: 'jacketSize', l: 'Paletó' },
+    { k: 'chest', l: 'Tórax' },
+    { k: 'waist', l: 'Cintura' },
+    { k: 'hips', l: 'Quadril' },
+    { k: 'shoulder', l: 'Ombro' },
+    { k: 'sleeve', l: 'Manga' },
+    { k: 'inseam', l: 'Gancho' },
+    { k: 'neck', l: 'Colarinho' }
+];
+
+const DEBUTANTE_FIELDS = [
+    { k: 'busto', l: 'Busto' },
+    { k: 'abBusto', l: 'AB. Busto' },
+    { k: 'cintura', l: 'Cintura' },
+    { k: 'quadril', l: 'Quadril' },
+    { k: 'altQuadril', l: 'Alt. Quadril' },
+    { k: 'ombro', l: 'Ombro' },
+    { k: 'manga', l: 'Manga' },
+    { k: 'cava', l: 'Cava' },
+    { k: 'frente', l: 'Frente' },
+    { k: 'costa', l: 'Costa' },
+    { k: 'comprBlusa', l: 'Compr. Blusa' },
+    { k: 'comprSaia', l: 'Compr. Saia' },
+    { k: 'comprShort', l: 'Compr. Short' },
+    { k: 'comprManga', l: 'Compr. Manga' },
+    { k: 'colarinho', l: 'Colarinho' },
+    { k: 'largBraco', l: 'Larg. Braço' },
+    { k: 'punho', l: 'Punho' }
+];
+
+const COMMON_FIELDS = [
+    { k: 'busto', l: 'Busto' },
+    { k: 'abBusto', l: 'Abaix. Busto' },
+    { k: 'cintura', l: 'Cintura' },
+    { k: 'terno', l: 'Terno' },
+    { k: 'cm', l: 'CM' },
+    { k: 'calca', l: 'Calça' },
+    { k: 'cc', l: 'CC' },
+    { k: 'height', l: 'Altura' }, { k: 'weight', l: 'Peso' }, { k: 'shoeSize', l: 'Sapato' }
+];
+
 export default function Clients() {
     const { clients, addClient, updateClient, deleteClient, contracts } = useApp();
     const { showToast } = useToast();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedClient, setSelectedClient] = useState<import('../types').Client | null>(null);
-
     const [newClient, setNewClient] = useState<Partial<import('../types').Client>>({
-        name: '',
-        // type: 'Noivo', // Deprecated
-        phone: '',
-        email: '',
-        initials: '',
-        cpf: '',
-        rg: '',
-        address: '',
-        neighborhood: '',
-        city: '',
-        state: '',
-        zip: '',
-        birthDate: '',
-        measurements: {
-            height: '', weight: '', shoeSize: '', shirtSize: '', pantsSize: '', jacketSize: '',
-            chest: '', waist: '', hips: '', shoulder: '', sleeve: '', inseam: '', neck: ''
-        }
+        name: '', phone: '', cpf: '', rg: '', email: '', birthDate: '',
+        address: '', neighborhood: '', city: '', state: '', zip: '',
+        profileType: 'Comum',
+        measurements: {}
     });
 
     const handleCEPChange = async (cep: string) => {
@@ -74,6 +107,7 @@ export default function Clients() {
                 state: newClient.state,
                 zip: newClient.zip,
                 birthDate: newClient.birthDate,
+                profileType: newClient.profileType,
                 measurements: newClient.measurements
             };
 
@@ -92,7 +126,8 @@ export default function Clients() {
             setNewClient({
                 name: '', phone: '', email: '', initials: '',
                 cpf: '', rg: '', address: '', neighborhood: '', city: '', state: '', zip: '', birthDate: '',
-                measurements: { height: '', weight: '', shoeSize: '', shirtSize: '', pantsSize: '', jacketSize: '', chest: '', waist: '', hips: '', shoulder: '', sleeve: '', inseam: '', neck: '' }
+                profileType: 'Comum',
+                measurements: {}
             });
         }
     };
@@ -356,25 +391,24 @@ export default function Clients() {
                                         <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
                                             <span className="material-symbols-outlined text-lg">straighten</span> Medidas
                                         </h3>
-                                        <div className="grid grid-cols-3 gap-3">
-                                            {[
-                                                { k: 'height', l: 'Altura', i: 'height' },
-                                                { k: 'weight', l: 'Peso', i: 'monitor_weight' },
-                                                { k: 'shoeSize', l: 'Sapato', i: 'steps' },
-                                                { k: 'jacketSize', l: 'Paletó', i: 'checkroom' },
-                                                { k: 'pantsSize', l: 'Calça', i: 'accessibility_new' },
-                                                { k: 'shirtSize', l: 'Camisa', i: 'dry_cleaning' },
-                                            ].map((m) => (
-                                                <div key={m.k} className="bg-white rounded-2xl p-3 border border-gray-100 shadow-sm flex flex-col items-center justify-center gap-2 group hover:shadow-md hover:border-primary/20 transition-all cursor-default">
-                                                    <div className="size-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:text-primary group-hover:bg-primary/10 transition-colors">
-                                                        <span className="material-symbols-outlined text-lg">{m.i}</span>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                            {(!selectedClient.profileType ? LEGACY_FIELDS : (selectedClient.profileType === 'Debutante' ? DEBUTANTE_FIELDS : COMMON_FIELDS))
+                                                .filter(m => {
+                                                    const val = selectedClient.measurements?.[m.k as keyof typeof selectedClient.measurements];
+                                                    return val && val !== "" && val !== "0";
+                                                })
+                                                .map((m) => (
+                                                    <div key={m.k} className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm flex flex-col items-center justify-center gap-1 group hover:shadow-md hover:border-primary/20 transition-all cursor-default">
+                                                        <div className="text-center">
+                                                            <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">{m.l}</p>
+                                                            <p className="text-xs font-black text-navy">{selectedClient.measurements?.[m.k as keyof typeof selectedClient.measurements]}</p>
+                                                        </div>
                                                     </div>
-                                                    <div className="text-center">
-                                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">{m.l}</p>
-                                                        <p className="text-sm font-black text-navy">{selectedClient.measurements?.[m.k as keyof typeof selectedClient.measurements] || '-'}</p>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                ))}
+                                            {(!selectedClient.measurements ||
+                                                Object.values(selectedClient.measurements).every(v => v === "" || v === "0")) && (
+                                                    <p className="col-span-full text-center text-xs text-gray-400 italic py-4">Nenhuma medida registrada para este perfil.</p>
+                                                )}
                                         </div>
                                     </div>
                                 </div>
@@ -526,6 +560,32 @@ export default function Clients() {
                                             maxLength={15}
                                         />
                                     </div>
+                                    <div className="col-span-1 md:col-span-2">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
+                                            {newClient.id && !newClient.profileType ? 'Cliente Legado (Medidas Antigas)' : 'Tipo de Cliente'}
+                                        </label>
+                                        {(!newClient.id || newClient.profileType) ? (
+                                            <div className="flex gap-4">
+                                                <button
+                                                    onClick={() => setNewClient({ ...newClient, profileType: 'Comum' })}
+                                                    className={`flex-1 py-3 rounded-xl border font-bold text-xs uppercase tracking-widest transition-all ${newClient.profileType !== 'Debutante' ? 'bg-navy text-white border-navy shadow-lg' : 'bg-white text-gray-400 border-gray-200'}`}
+                                                >
+                                                    Comum
+                                                </button>
+                                                <button
+                                                    onClick={() => setNewClient({ ...newClient, profileType: 'Debutante' })}
+                                                    className={`flex-1 py-3 rounded-xl border font-bold text-xs uppercase tracking-widest transition-all ${newClient.profileType === 'Debutante' ? 'bg-navy text-white border-navy shadow-lg' : 'bg-white text-gray-400 border-gray-200'}`}
+                                                >
+                                                    Debutante
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="p-3 bg-gray-50 rounded-xl border border-dashed border-gray-200 text-xs text-gray-500 font-medium italic">
+                                                Este cliente foi cadastrado antes do novo sistema de medidas. Suas medidas originais serão preservadas.
+                                            </div>
+                                        )}
+                                    </div>
+
                                     <div>
                                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label>
                                         <input value={newClient.email} onChange={e => setNewClient({ ...newClient, email: e.target.value })} className="w-full h-10 px-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary/20 outline-none" placeholder="cliente@email.com" />
@@ -533,20 +593,12 @@ export default function Clients() {
 
                                     <div className="col-span-1 md:col-span-2 pt-4">
                                         <label className="block text-xs font-bold text-gray-500 uppercase mb-3 flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-base">straighten</span> Medidas
+                                            <span className="material-symbols-outlined text-base">straighten</span> Medidas ({newClient.profileType})
                                         </label>
                                         <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-                                            {[
-                                                { k: 'height', l: 'Altura' }, { k: 'weight', l: 'Peso' },
-                                                { k: 'shoeSize', l: 'Sapato' }, { k: 'shirtSize', l: 'Camisa' },
-                                                { k: 'pantsSize', l: 'Calça' }, { k: 'jacketSize', l: 'Paletó' },
-                                                { k: 'neck', l: 'Pescoço' }, { k: 'chest', l: 'Tórax' },
-                                                { k: 'waist', l: 'Cintura' }, { k: 'hips', l: 'Quadril' },
-                                                { k: 'shoulder', l: 'Ombro' }, { k: 'sleeve', l: 'Manga' },
-                                                { k: 'inseam', l: 'Entrepernas' }
-                                            ].map((m) => (
+                                            {(!newClient.profileType ? LEGACY_FIELDS : (newClient.profileType === 'Debutante' ? DEBUTANTE_FIELDS : COMMON_FIELDS)).map((m) => (
                                                 <div key={m.k}>
-                                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">{m.l}</label>
+                                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1" title={m.k}>{m.l}</label>
                                                     <input
                                                         value={newClient.measurements?.[m.k as keyof typeof newClient.measurements] || ''}
                                                         onChange={e => setNewClient({
