@@ -134,8 +134,8 @@ export default function ContractDetails({ contract, client, items, onClose, onPr
             await updateContract(contract.id, {
                 isPhysicallySigned: newValue,
                 // If marking as physically signed, clear digital signatures to avoid confusion
-                lesseeSignature: newValue ? undefined : contract.lesseeSignature,
-                attendantSignature: newValue ? undefined : contract.attendantSignature
+                lesseeSignature: newValue ? '' : contract.lesseeSignature,
+                attendantSignature: newValue ? '' : contract.attendantSignature
             });
             showToast('success', newValue ? 'Contrato marcado como Assinado no Papel.' : 'Assinatura física removida.');
         } catch (error) {
